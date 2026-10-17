@@ -7,3 +7,7 @@
 2. ارفع الملفين: `index.html` و`README.md` إلى الفرع `main`.
 3. من Settings ثم Pages: اختر Source = Deploy from a branch، الفرع `main`، المجلد `/ (root)`، ثم Save.
 4. بعد دقيقة يظهر الرابط: `https://اسم-المستخدم.github.io/اسم-المستودع/`
+
+## لعبة بستان البذرة
+الملف: `garden/index.html` (على GitHub Pages يكون الرابط `.../garden/`).
+أسماء المحطات وكلمات السر في أعلى الكود داخل `CONFIG`.
