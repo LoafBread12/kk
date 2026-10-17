@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>بستان البذرة</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@400;600;800&family=Lalezar&display=swap">
+<style>
+/* Layout: a wooden game cabinet. The garden scene fills the left and centre,
+   a wooden divider, then the board of six password stations on the right. */
+:root{
+  --wood-900:#2e190c; --wood-700:#5a331a; --wood-500:#8a5530; --wood-300:#c08a52;
+  --sky-900:#0f3349; --sky-700:#1c5878; --sky-500:#3a8bb0;
+  --parch:#f2e6c9; --parch-2:#dcc69b; --ink:#fff6e3; --ink-dark:#3a2414; --ink-mut:#c9dde8;
+  --leaf:#6dbb4f; --leaf-deep:#2f6b2a; --gold:#f4c34f; --water:#86d6ff; --bad:#ffb4a3;
+  --f-display:"Lalezar","Baloo Bhaijaan 2",Tahoma,sans-serif;
+  --f-body:"Baloo Bhaijaan 2",Tahoma,"Segoe UI",sans-serif;
+  --grain:repeating-linear-gradient(90deg,rgba(0,0,0,.13) 0 2px,transparent 2px 9px,rgba(255,255,255,.05) 9px 10px,transparent 10px 19px);
+  --grain-v:repeating-linear-gradient(0deg,rgba(0,0,0,.13) 0 2px,transparent 2px 9px,rgba(255,255,255,.05) 9px 10px,transparent 10px 19px);
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; color:var(--ink); font-family:var(--f-body); font-size:16px; line-height:1.5;
+  background:var(--grain),linear-gradient(180deg,#3a2010,var(--wood-900));
+  background-color:var(--wood-900);
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:0;
+  -webkit-tap-highlight-color:transparent;
+}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+
+.app{height:100%;display:grid;grid-template-columns:minmax(0,1fr) 16px minmax(300px,390px);grid-template-rows:minmax(0,1fr);direction:ltr;padding-block:12px}
+.app>*{direction:rtl}
+
+.panel{position:relative;border-radius:6px;box-shadow:0 0 0 3px var(--wood-700),0 0 0 5px rgba(0,0,0,.35),inset 0 0 60px rgba(0,0,0,.45)}
+.divider{background:var(--grain-v),linear-gradient(90deg,var(--wood-700),var(--wood-300) 45%,var(--wood-500) 60%,var(--wood-700));border-radius:3px;margin-inline:4px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.4)}
+
+/* ---------- Garden ---------- */
+.garden{
+  overflow:hidden; container-type:size; touch-action:none; user-select:none; -webkit-user-select:none;
+  background:
+    repeating-linear-gradient(90deg,rgba(255,255,255,.035) 0 3px,transparent 3px 28px),
+    radial-gradient(ellipse 70% 55% at 50% 62%,rgba(255,255,255,.16),transparent 70%),
+    linear-gradient(180deg,var(--sky-500) 0%,var(--sky-700) 58%,var(--sky-900) 100%);
+  cursor:grab;
+}
+.garden.pouring{cursor:grabbing}
+.sun{position:absolute;top:28px;left:30px;width:86px;height:86px;border-radius:50%;
+  background:radial-gradient(circle at 40% 38%,#fff3c4,var(--gold) 55%,#e9a73a);
+  box-shadow:0 0 40px 14px rgba(244,195,79,.45),0 0 120px 40px rgba(244,195,79,.18);z-index:0}
+.cloud{position:absolute;height:34px;border-radius:40px;background:rgba(255,255,255,.85);filter:blur(.3px);z-index:0;opacity:.75;animation:drift 70s linear infinite}
+.cloud::before,.cloud::after{content:"";position:absolute;background:inherit;border-radius:50%}
+.cloud::before{width:50%;height:150%;top:-60%;left:16%}
+.cloud::after{width:36%;height:120%;top:-40%;left:50%}
+.cloud.c1{width:130px;top:150px;left:-160px}
+.cloud.c2{width:96px;top:70px;left:-120px;animation-duration:95s;animation-delay:-40s;opacity:.55}
+.cloud.c3{width:160px;top:220px;left:-200px;animation-duration:120s;animation-delay:-80s;opacity:.4}
+@keyframes drift{to{transform:translateX(calc(100cqw + 400px))}}
+.hill{position:absolute;left:-10%;right:-10%;bottom:-38cqh;height:62cqh;border-radius:50%;
+  background:radial-gradient(ellipse at 50% 20%,#4f9a45,#2f6b2a 60%,#1f4d1f);z-index:0}
+
+.stage-wrap{position:absolute;left:50%;bottom:104px;z-index:1;transform:translateX(-50%);
+  width:max(190px,min(80cqw,calc((100cqh - 262px) * .87),600px));aspect-ratio:400/460;max-width:100%}
+.rays{position:absolute;left:50%;top:44%;width:190%;aspect-ratio:1;translate:-50% -50%;pointer-events:none;
+  background:repeating-conic-gradient(rgba(255,255,255,.11) 0 9deg,transparent 9deg 22deg);
+  -webkit-mask:radial-gradient(circle,#000 18%,transparent 62%);mask:radial-gradient(circle,#000 18%,transparent 62%);
+  animation:spin 80s linear infinite}
+@keyframes spin{to{rotate:360deg}}
+#scene{position:relative;width:100%;height:100%;overflow:visible;display:block}
+#plantPop{transform-box:view-box;transform-origin:200px 352px}
+#plantPop.pop{animation:pop .7s cubic-bezier(.3,1.6,.5,1)}
+@keyframes pop{0%{transform:scale(.82)}100%{transform:scale(1)}}
+#plantSway{transform-box:view-box;transform-origin:200px 352px;animation:sway 5s ease-in-out infinite}
+@keyframes sway{0%,100%{transform:rotate(-1deg)}50%{transform:rotate(1deg)}}
+
+#fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
+
+.can{position:absolute;left:0;top:0;width:120px;height:96px;padding:0;border:0;background:none;z-index:3;cursor:grab;touch-action:none;will-change:transform}
+.can svg{width:100%;height:100%;display:block;overflow:visible;filter:drop-shadow(0 6px 6px rgba(0,0,0,.35))}
+.can.ready .can-art{animation:bob 1.6s ease-in-out infinite}
+.can.ready::after{content:"اسحبني";position:absolute;top:-30px;left:50%;translate:-50% 0;font-family:var(--f-display);font-size:17px;color:var(--ink);
+  background:rgba(15,51,73,.8);border:2px solid var(--gold);padding:0 10px;border-radius:20px;white-space:nowrap;animation:bob 1.6s ease-in-out infinite}
+.can.empty{filter:grayscale(.85) brightness(.85);opacity:.7}
+.can.filling .can-art{animation:fill .9s ease}
+@keyframes bob{50%{transform:translateY(-5px)}}
+@keyframes fill{30%{transform:scale(1.18) rotate(6deg)}60%{transform:scale(.96)}}
+
+.hud{position:absolute;top:14px;left:50%;translate:-50% 0;z-index:5;pointer-events:none;display:grid;justify-items:center;gap:8px;width:min(94%,520px)}
+.plaque{background:rgba(10,30,45,.62);border:2px solid rgba(255,255,255,.12);border-radius:10px;padding:8px 22px 12px;display:grid;justify-items:center;gap:4px;backdrop-filter:blur(3px)}
+.g-title{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(26px,4.4cqw,38px);line-height:1.15;letter-spacing:.5px;text-shadow:0 2px 0 rgba(0,0,0,.45)}
+.g-stage{margin:0;font-weight:800;font-size:17px;color:var(--ink)}
+.g-stage b{color:var(--gold);font-weight:800}
+.track{list-style:none;margin:4px 0 0;padding:0;display:flex;gap:5px;direction:rtl}
+.track li{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;line-height:1;
+  background:rgba(0,0,0,.35);border:2px solid rgba(255,255,255,.2);color:rgba(255,255,255,.55);transition:background .4s,border-color .4s,transform .4s}
+.track li.done{background:var(--leaf);border-color:#a8e08a;color:#0f2d0c}
+.track li.now{background:var(--gold);border-color:#fff1bf;color:#4a2c06;transform:scale(1.18);box-shadow:0 0 12px rgba(244,195,79,.8)}
+.next{width:100%;height:7px;border-radius:9px;background:rgba(0,0,0,.4);overflow:hidden;margin-top:4px}
+.next span{display:block;height:100%;width:0;background:linear-gradient(90deg,#a8e08a,var(--leaf));border-radius:9px;transition:width .25s linear;margin-inline-start:0}
+.ticker{margin:0;font-weight:600;font-size:15px;text-align:center;color:var(--ink);text-shadow:0 1px 3px rgba(0,0,0,.7);text-wrap:balance;transition:opacity .35s}
+.ticker.fade{opacity:0}
+
+.gauge{position:absolute;left:50%;bottom:14px;translate:-50% 0;z-index:5;width:min(92%,470px);display:flex;align-items:center;gap:12px;
+  padding:8px 14px;border-radius:10px;pointer-events:none;
+  background:var(--grain),linear-gradient(180deg,var(--wood-300),var(--wood-500) 50%,var(--wood-700));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.3),inset 0 -2px 0 rgba(0,0,0,.35),0 6px 18px rgba(0,0,0,.35)}
+.g-ico{flex:none;width:52px;height:52px;border-radius:10px;background:rgba(0,0,0,.28);display:grid;place-items:center}
+.g-ico svg{width:42px;height:34px}
+.g-body{flex:1;min-width:0}
+.g-row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-weight:800;font-size:15px;text-shadow:0 1px 0 rgba(0,0,0,.5)}
+#waterTxt{font-variant-numeric:tabular-nums;color:#dff4ff}
+.g-bar{height:12px;border-radius:9px;background:rgba(0,0,0,.4);box-shadow:inset 0 1px 3px rgba(0,0,0,.6);overflow:hidden;margin-block:3px}
+.g-bar span{display:block;height:100%;width:0;border-radius:9px;background:linear-gradient(180deg,#c9efff,var(--water) 50%,#3aa5d8);transition:width .2s linear}
+.g-hint{margin:0;font-size:14px;font-weight:600;line-height:1.35;color:var(--ink)}
+.gauge.done{background:var(--grain),linear-gradient(180deg,#f7d77c,#d9a23b 55%,#a06a1c)}
+.gauge.done .g-hint{font-family:var(--f-display);font-size:19px;font-weight:400;color:#3a2006;text-shadow:none}
+
+.toast{position:absolute;left:50%;bottom:104px;z-index:6;translate:-50% 0;pointer-events:none;min-width:240px;max-width:90%;
+  background:rgba(14,10,6,.92);border:2px solid var(--gold);border-radius:6px;padding:8px 18px;display:flex;gap:12px;align-items:center;
+  box-shadow:0 0 0 2px rgba(0,0,0,.5),0 10px 30px rgba(0,0,0,.5);opacity:0;transform:translateY(16px);transition:opacity .3s,transform .3s}
+.toast.show{opacity:1;transform:none}
+.toast .t-ico{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle,#ffe9a6,var(--gold));color:#4a2c06}
+.toast .t-ico svg{width:20px;height:20px}
+.toast small{display:block;font-size:13px;color:#e8d6b4;line-height:1.2}
+.toast strong{display:block;font-family:var(--f-display);font-weight:400;font-size:21px;line-height:1.25}
+
+/* ---------- Station board ---------- */
+.board{display:flex;flex-direction:column;overflow:auto;
+  background:repeating-linear-gradient(90deg,rgba(255,255,255,.03) 0 3px,transparent 3px 28px),linear-gradient(180deg,var(--sky-700),var(--sky-900))}
+.board.nudge{animation:nudge 1s ease 2}
+@keyframes nudge{40%{box-shadow:0 0 0 3px var(--gold),0 0 30px rgba(244,195,79,.7),inset 0 0 60px rgba(0,0,0,.45)}}
+.b-head{padding:16px 16px 0;text-align:center}
+.b-head h2{margin:0;font-family:var(--f-display);font-weight:400;font-size:40px;line-height:1.1;text-shadow:0 3px 0 rgba(0,0,0,.45)}
+.plank{height:12px;margin:10px 0 0;border-radius:3px;background:var(--grain),linear-gradient(180deg,var(--wood-300),var(--wood-500) 50%,var(--wood-700));box-shadow:0 2px 0 rgba(0,0,0,.35)}
+.b-sub{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:12px 14px 6px;padding:4px 10px;border-radius:4px;background:rgba(0,0,0,.3);font-weight:800;font-size:14px;letter-spacing:.3px}
+.pips{display:flex;gap:4px}
+.pips i{width:12px;height:12px;border-radius:50%;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3)}
+.pips i.on{background:var(--water);border-color:#d9f3ff;box-shadow:0 0 6px var(--water)}
+.b-help{margin:0 14px 10px;font-size:14px;color:var(--ink-mut);line-height:1.4}
+
+.stations{list-style:none;margin:0;padding:0 12px 12px;display:grid;gap:9px}
+.station{border-radius:6px;background:linear-gradient(180deg,var(--parch),var(--parch-2));color:var(--ink-dark);
+  box-shadow:0 0 0 2px var(--wood-700),inset 0 1px 0 rgba(255,255,255,.7),0 4px 0 rgba(0,0,0,.25);transition:transform .15s,background .3s}
+.st-head{display:flex;align-items:center;gap:12px;width:100%;padding:9px 12px;border:0;background:none;cursor:pointer;text-align:start;color:inherit;border-radius:6px}
+.st-head:hover{background:rgba(255,255,255,.35)}
+.st-ico{flex:none;width:50px;height:50px;border-radius:10px;display:grid;place-items:center;color:var(--gold);
+  background:linear-gradient(160deg,var(--sky-500),var(--sky-900));box-shadow:inset 0 0 0 2px rgba(0,0,0,.25)}
+.st-ico svg{width:30px;height:30px}
+.st-text{flex:1;min-width:0;display:grid}
+.st-name{font-family:var(--f-display);font-size:24px;line-height:1.2}
+.st-status{font-size:14px;font-weight:600;color:#7a5634;display:flex;align-items:center;gap:5px}
+.st-status svg{width:14px;height:14px;flex:none}
+.st-chev{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:rgba(58,36,20,.12);transition:rotate .3s}
+.st-chev svg{width:14px;height:14px}
+.station.open .st-chev{rotate:180deg}
+.st-drop{display:grid;grid-template-rows:0fr;transition:grid-template-rows .32s ease}
+.station.open .st-drop{grid-template-rows:1fr}
+.st-drop-in{overflow:hidden}
+.st-form,.st-donemsg{margin:0 10px 10px;padding:10px 12px 8px;border-radius:6px;
+  background:var(--grain),linear-gradient(180deg,var(--wood-700),#432612);color:var(--ink);box-shadow:inset 0 2px 6px rgba(0,0,0,.5)}
+.st-form label{display:block;font-weight:800;font-size:14px;margin-bottom:6px}
+.st-row{display:flex;gap:8px}
+.st-row input{flex:1;min-width:0;height:44px;padding:0 12px;border-radius:6px;border:2px solid var(--wood-900);background:var(--parch);color:var(--ink-dark);
+  font-size:20px;font-weight:800;letter-spacing:2px;text-align:center;box-shadow:inset 0 2px 4px rgba(0,0,0,.25)}
+.st-row input::placeholder{color:#a88a62;letter-spacing:4px}
+.st-go{flex:none;height:44px;padding:0 14px;border-radius:6px;border:0;cursor:pointer;font-weight:800;color:#0b2a3b;
+  background:linear-gradient(180deg,#d4f2ff,var(--water) 55%,#4fb2e2);box-shadow:inset 0 -3px 0 rgba(0,0,0,.2),0 2px 0 rgba(0,0,0,.4)}
+.st-go:active{transform:translateY(2px)}
+.st-msg{min-height:1.4em;margin:6px 0 0;font-size:14px;font-weight:700}
+.st-msg.bad{color:var(--bad)}
+.st-msg.ok{color:#b8f39a}
+.st-donemsg{display:none;font-size:14px;font-weight:600}
+.station.done{background:linear-gradient(180deg,#e3f2c8,#bcd998)}
+.station.done .st-ico{background:linear-gradient(160deg,#7cc35a,var(--leaf-deep));color:#fff7d6}
+.station.done .st-status{color:var(--leaf-deep)}
+.station.done .st-form{display:none}
+.station.done .st-donemsg{display:block}
+.station.shake{animation:shake .45s}
+@keyframes shake{20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+
+.b-foot{margin-top:auto;padding:10px 14px 14px;display:flex;justify-content:flex-start}
+.reset{border:1px solid rgba(255,255,255,.25);background:rgba(0,0,0,.25);color:var(--ink-mut);border-radius:20px;padding:4px 14px;font-size:13px;font-weight:600;cursor:pointer}
+.reset.arm{background:#8a2c1e;border-color:#ffb4a3;color:#fff}
+
+@media (max-width:860px){
+  html,body{height:auto}
+  .app{height:auto;grid-template-columns:minmax(0,1fr);grid-template-rows:auto 16px auto}
+  .garden{height:min(82svh,700px);min-height:540px}
+  .divider{margin:4px 0;background:var(--grain),linear-gradient(180deg,var(--wood-700),var(--wood-300) 45%,var(--wood-500) 60%,var(--wood-700))}
+  .board{overflow:visible}
+  .sun{width:46px;height:46px;top:200px;left:12px}
+}
+@media (max-width:420px){
+  .track li{width:21px;height:21px;font-size:11px}
+  .track{gap:3px}
+  .plaque{padding-inline:12px}
+}
+@media (prefers-reduced-motion:reduce){
+  .rays,.cloud,#plantSway,.can.ready .can-art,.can.ready::after{animation:none}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <section class="garden panel" id="garden" aria-label="الحديقة">
+    <div class="sun"></div>
+    <div class="cloud c1"></div><div class="cloud c2"></div><div class="cloud c3"></div>
+    <div class="hill"></div>
+
+    <div class="stage-wrap" id="stageWrap">
+      <div class="rays"></div>
+      <svg id="scene" viewBox="0 0 400 460" role="img" aria-labelledby="stageAria">
+        <title id="stageAria">البذرة في التراب</title>
+        <defs>
+          <clipPath id="soilClip"><path d="M50 350A150 14 0 0 0 350 350Q352 440 200 446Q48 440 50 350Z"/></clipPath>
+        </defs>
+        <ellipse cx="200" cy="450" rx="172" ry="13" fill="#000" opacity=".28"/>
+        <path id="soilBody" d="M50 350Q48 440 200 446Q352 440 350 350Z" fill="#5b3620"/>
+        <g clip-path="url(#soilClip)">
+          <g id="pebbles"></g>
+          <g id="roots"></g>
+        </g>
+        <ellipse id="soilTop" cx="200" cy="350" rx="150" ry="14" fill="#7a4c2c"/>
+        <ellipse cx="200" cy="347" rx="132" ry="7" fill="#fff" opacity=".06"/>
+        <g id="grass"></g>
+        <g id="plantPop"><g id="plantSway"><g id="plant"></g></g></g>
+      </svg>
+    </div>
+
+    <canvas id="fx" aria-hidden="true"></canvas>
+
+    <button class="can" id="can" type="button" aria-label="إبريق السقي. اسحبه فوق التربة، أو اضغط مع الاستمرار على المسافة لتسقي">
+      <svg viewBox="0 0 120 96" aria-hidden="true"><g class="can-art">
+        <path d="M54 30C60 8 88 8 94 30" fill="none" stroke="#1f6f8c" stroke-width="6" stroke-linecap="round"/>
+        <path d="M98 42C124 42 122 80 96 76" fill="none" stroke="#1f6f8c" stroke-width="7" stroke-linecap="round"/>
+        <path d="M50 66L13 39L18 32L54 56Z" fill="#2b8db0" stroke="#1f6f8c" stroke-width="2" stroke-linejoin="round"/>
+        <ellipse cx="13" cy="36" rx="8" ry="5" transform="rotate(-40 13 36)" fill="#1f6f8c"/>
+        <g fill="#9fe2ff"><circle cx="10" cy="35" r="1.2"/><circle cx="14" cy="33" r="1.2"/><circle cx="13" cy="38" r="1.2"/></g>
+        <path d="M44 34L100 34L96 86Q72 93 48 86Z" fill="#3fa9cf" stroke="#1f6f8c" stroke-width="2.5" stroke-linejoin="round"/>
+        <path d="M52 40L56 82" stroke="#bdeeff" stroke-width="5" stroke-linecap="round" opacity=".55"/>
+        <path d="M46 58L98 58" stroke="#1f6f8c" stroke-width="2" opacity=".5"/>
+        <ellipse cx="72" cy="34" rx="28" ry="5" fill="#2b8db0" stroke="#1f6f8c" stroke-width="2.5"/>
+        <ellipse cx="72" cy="34" rx="21" ry="3" fill="#0f4a60"/>
+      </g></svg>
+    </button>
+
+    <div class="hud">
+      <header class="plaque">
+        <h1 class="g-title">بستان البذرة</h1>
+        <p class="g-stage"><span id="stageNum">المرحلة ١ من ١٠</span> · <b id="stageName">بذرة</b></p>
+        <ol class="track" id="track"></ol>
+        <div class="next" title="النمو حتى المرحلة التالية"><span id="nextBar"></span></div>
+      </header>
+      <p class="ticker" id="ticker"></p>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite">
+      <span class="t-ico"><svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z" fill="currentColor"/></svg></span>
+      <span><small id="toastSmall"></small><strong id="toastBig"></strong></span>
+    </div>
+
+    <div class="gauge" id="gauge">
+      <div class="g-ico"><svg viewBox="0 0 120 96" aria-hidden="true"><path d="M50 66L13 39L18 32L54 56Z" fill="#2b8db0"/><path d="M44 34L100 34L96 86Q72 93 48 86Z" fill="#3fa9cf"/><path d="M98 42C124 42 122 80 96 76" fill="none" stroke="#1f6f8c" stroke-width="7"/><path d="M60 12q-6 10 0 14q6-4 0-14z" fill="#86d6ff"/></svg></div>
+      <div class="g-body">
+        <div class="g-row"><span>ماء الإبريق</span><span id="waterTxt">فارغ</span></div>
+        <div class="g-bar"><span id="waterBar"></span></div>
+        <p class="g-hint" id="hint"></p>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider" aria-hidden="true"></div>
+
+  <aside class="board panel" id="board" aria-label="المحطات">
+    <div class="b-head"><h2>المحطات</h2><div class="plank"></div></div>
+    <div class="b-sub"><span id="openCount">المحطات المفتوحة: ٠ من ٦</span><span class="pips" id="pips"></span></div>
+    <p class="b-help">اضغط على المحطة واكتب كلمة السر التي حصلت عليها من اللعبة، فيمتلئ إبريق السقي.</p>
+    <ul class="stations" id="stations"></ul>
+    <div class="b-foot"><button class="reset" id="reset" type="button">بدء من جديد</button></div>
+  </aside>
+</div>
+
+<script>
+/* ===================== الإعدادات: غيّر أسماء المحطات وكلمات السر من هنا ===================== */
+const CONFIG = {
+  stations: [
+    { id: "s1", name: "محطة الشمس",  icon: "sun",      code: "101" },
+    { id: "s2", name: "محطة الغيمة", icon: "cloud",    code: "202" },
+    { id: "s3", name: "محطة الجبل",  icon: "mountain", code: "303" },
+    { id: "s4", name: "محطة النجمة", icon: "star",     code: "404" },
+    { id: "s5", name: "محطة القمر",  icon: "moon",     code: "505" },
+    { id: "s6", name: "محطة القطرة", icon: "drop",     code: "606" }
+  ],
+  pourSeconds: 6   // كم ثانية سقي يحتاجها ماء كل محطة
+};
+
+const STAGES = [
+  { name: "بذرة",          desc: "بذرة صغيرة نائمة في التراب، تنتظر قطرات الماء." },
+  { name: "تنتفخ البذرة",   desc: "شربت البذرة الماء فانتفخت وتشقّقت قشرتها." },
+  { name: "الجُذير",        desc: "خرج أوّل جذر صغير، يتّجه إلى الأسفل ليبحث عن الماء." },
+  { name: "النُّبَيتة",      desc: "ظهرت ساق صغيرة تشقّ التراب نحو الضوء." },
+  { name: "الفلقتان",       desc: "انفتحت ورقتان مستديرتان تُسمّيان الفلقتين، فيهما غذاء النبتة." },
+  { name: "الأوراق",        desc: "نمت أوراق حقيقية تصنع الغذاء بضوء الشمس." },
+  { name: "الشتلة",         desc: "صارت النبتة شتلة، وساقها تزداد طولًا وقوّة." },
+  { name: "الشجيرة",        desc: "تحوّلت الساق إلى جذع خشبي، وتفرّعت منه الأغصان." },
+  { name: "الإزهار",        desc: "تفتّحت الأزهار على الأغصان، وستصير ثمارًا بإذن الله." },
+  { name: "الإثمار",        desc: "أثمرت الشجرة! الحمد لله الذي أخرج من البذرة الصغيرة شجرة طيّبة." }
+];
+
+const ICONS = {
+  sun: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" fill="currentColor"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+  cloud: '<svg viewBox="0 0 24 24"><path d="M7 19h10.5a4.5 4.5 0 0 0 .5-8.97A6 6 0 0 0 6.3 9.6 4.7 4.7 0 0 0 7 19z" fill="currentColor"/></svg>',
+  mountain: '<svg viewBox="0 0 24 24"><path d="M1.5 20 9 6.5l4.2 7.4 2.3-3.4L22.5 20z" fill="currentColor"/><path d="M9 6.5l2.2 3.9-2.2 1.5-2.1-1.4z" fill="#fff" opacity=".85"/></svg>',
+  star: '<svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z" fill="currentColor"/></svg>',
+  moon: '<svg viewBox="0 0 24 24"><path d="M15.5 2.8a9 9 0 1 0 6 15.6A7.4 7.4 0 0 1 15.5 2.8z" fill="currentColor"/></svg>',
+  drop: '<svg viewBox="0 0 24 24"><path d="M12 2.5S5.5 10 5.5 14.6a6.5 6.5 0 0 0 13 0C18.5 10 12 2.5 12 2.5z" fill="currentColor"/><path d="M9 14.5a3 3 0 0 0 3 3" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".8"/></svg>'
+};
+const LOCK = '<svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2" fill="currentColor"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="currentColor" stroke-width="2.4"/></svg>';
+const CHECK = '<svg viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const CHEV = '<svg viewBox="0 0 24 24"><path d="M5 9l7 7 7-7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+document.documentElement.lang = "ar";
+document.documentElement.dir = "rtl";
+
+const $ = s => document.querySelector(s);
+const toAr = n => String(n).replace(/\d/g, d => "٠١٢٣٤٥٦٧٨٩"[d]);
+const norm = s => String(s).trim().toLowerCase()
+  .replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d))
+  .replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d))
+  .replace(/[إأآ]/g, "ا").replace(/\s+/g, "");
+
+const MAX = STAGES.length - 1;                       // 9 growth steps from seed to fruit
+const WPS = MAX / CONFIG.stations.length;            // growth each station's water gives
+const RATE = WPS / CONFIG.pourSeconds;               // growth per second of aimed pouring
+
+/* ---------- state ---------- */
+const KEY = "bustan-albithra-v1";
+let state = { unlocked: [], water: 0, progress: 0 };
+try {
+  const s = JSON.parse(localStorage.getItem(KEY));
+  if (s && Array.isArray(s.unlocked)) {
+    state.unlocked = s.unlocked.filter(id => CONFIG.stations.some(x => x.id === id));
+    state.water = Math.max(0, +s.water || 0);
+    state.progress = Math.min(MAX, Math.max(0, +s.progress || 0));
+  }
+} catch (e) {}
+let lastSave = 0;
+function save(force) {
+  const now = performance.now();
+  if (!force && now - lastSave < 600) return;
+  lastSave = now;
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+}
+
+/* ---------- drawing helpers ---------- */
+function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const f1 = n => n.toFixed(1);
+const G1 = "#a8db6c", G2 = "#7cc35a", G3 = "#5aa845";
+
+const leaf = (x, y, len, ang, col, w = .42) =>
+  `<g transform="translate(${x} ${y}) rotate(${ang})"><path d="M0 0Q${len * .5} ${-len * w} ${len} 0Q${len * .5} ${len * w} 0 0Z" fill="${col}"/><path d="M2 0L${f1(len * .82)} 0" stroke="#fff" stroke-opacity=".35" stroke-width="1.4" stroke-linecap="round"/></g>`;
+
+const seed = (x, y, r, s, crack) =>
+  `<g transform="translate(${x} ${y}) rotate(${r}) scale(${s})"><ellipse rx="14" ry="9.5" fill="#7a4b22"/><ellipse cx="-3" cy="-3.5" rx="8" ry="3.2" fill="#b98448" opacity=".85"/>${crack ? '<path d="M-10 1L-5-2.5L-1 2L3-2.5L8 1" fill="none" stroke="#f3e2b8" stroke-width="1.7" stroke-linejoin="round"/>' : ""}<ellipse rx="14" ry="9.5" fill="none" stroke="#4a2c12" stroke-width="1.5"/></g>`;
+
+const stem = (top, w, col = "#8cc152") =>
+  `<path d="M200 353C197 ${f1(353 - (353 - top) * .4)} 203.5 ${f1(353 - (353 - top) * .72)} 200 ${top}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round"/>`;
+
+function roots(depth, spread, col, w) {
+  const r = rng(7);
+  let s = `<g fill="none" stroke="${col}" stroke-linecap="round">`;
+  s += `<path d="M200 354C198 ${f1(356 + depth * .35)} 204 ${f1(356 + depth * .7)} 200 ${358 + depth}" stroke-width="${w}"/>`;
+  for (let i = 0; i < spread; i++) {
+    const y = 362 + (depth - 10) * (i + .4) / spread, dir = i % 2 ? 1 : -1, len = 12 + r() * depth * .55 + (spread - i) * 2;
+    s += `<path d="M200 ${f1(y)}q${f1(dir * len * .5)} ${f1(len * .15)} ${f1(dir * len)} ${f1(len * .55)}" stroke-width="${f1(w * .55)}"/>`;
+    if (depth > 60 && i % 2 === 0) s += `<path d="M${f1(200 + dir * len * .6)} ${f1(y + len * .25)}q${f1(dir * 6)} 8 ${f1(dir * 4)} 16" stroke-width="${f1(w * .35)}"/>`;
+  }
+  return s + "</g>";
+}
+
+function trunk(b, top, t) {
+  return `<path d="M${200 - b} 356C${f1(200 - b * .55)} 326 ${200 - t} ${top + 45} ${200 - t} ${top}L${200 + t} ${top}C${200 + t} ${top + 45} ${f1(200 + b * .55)} 326 ${200 + b} 356Z" fill="#7b4a26"/>` +
+    `<path d="M${f1(200 - t * .3)} ${top + 12}C${f1(200 - b * .2)} 300 ${f1(200 - b * .3)} 330 ${f1(200 - b * .4)} 352" stroke="#5a3418" stroke-width="2" fill="none" opacity=".6"/>` +
+    `<path d="M${f1(200 + t * .4)} ${top + 30}C${f1(200 + b * .3)} 310 ${f1(200 + b * .4)} 335 ${f1(200 + b * .55)} 352" stroke="#a06a3c" stroke-width="2" fill="none" opacity=".5"/>`;
+}
+const branch = (x1, y1, x2, y2, w) =>
+  `<path d="M${x1} ${y1}Q${(x1 + x2) / 2 + (x2 > x1 ? -10 : 10)} ${(y1 + y2) / 2 + 8} ${x2} ${y2}" stroke="#7b4a26" stroke-width="${w}" fill="none" stroke-linecap="round"/>`;
+
+function canopy(cx, cy, rx, ry, n, sd) {
+  const r = rng(sd), shades = ["#3a8234", "#55a443", "#78c45a"];
+  let s = "";
+  for (let layer = 0; layer < 3; layer++) {
+    for (let i = 0; i < n; i++) {
+      const a = r() * Math.PI * 2, d = Math.sqrt(r()) * (1 - layer * .2);
+      const x = cx + Math.cos(a) * rx * d * .8 - layer * rx * .06;
+      const y = cy + Math.sin(a) * ry * d * .8 - layer * ry * .12;
+      const rad = rx * .33 * (.7 + r() * .45) * (1 - layer * .22);
+      s += `<circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(rad)}" fill="${shades[layer]}"/>`;
+    }
+  }
+  return s;
+}
+function pts(cx, cy, rx, ry, n, sd) {
+  const r = rng(sd), o = [];
+  for (let g = 0; o.length < n && g < 800; g++) {
+    const a = r() * 6.283, d = Math.sqrt(r());
+    const x = cx + Math.cos(a) * rx * d, y = cy + Math.sin(a) * ry * d;
+    if (o.every(p => Math.hypot(p[0] - x, p[1] - y) > 24)) o.push([x, y]);
+  }
+  return o;
+}
+function blossom(x, y) {
+  let s = `<g transform="translate(${f1(x)} ${f1(y)})">`;
+  for (let i = 0; i < 5; i++) { const a = i * 1.2566 - 1.57; s += `<circle cx="${f1(Math.cos(a) * 4.2)}" cy="${f1(Math.sin(a) * 4.2)}" r="3.6" fill="${i % 2 ? "#ffd3e0" : "#fff6f8"}"/>`; }
+  return s + `<circle r="2.4" fill="#f4c34f"/></g>`;
+}
+const fruit = (x, y) =>
+  `<g transform="translate(${f1(x)} ${f1(y)})"><path d="M0-8q1-6 5-7" stroke="#5a3418" stroke-width="1.8" fill="none" stroke-linecap="round"/>${leaf(2, -12, 9, -30, "#4f9e3f", .5)}<circle r="9" fill="#e0453a"/><path d="M-7 3a9 9 0 0 0 13 3" stroke="#a82a22" stroke-width="2" fill="none" opacity=".6"/><circle cx="-3" cy="-3.5" r="2.6" fill="#fff" opacity=".55"/></g>`;
+
+const dimple = '<ellipse cx="200" cy="352" rx="24" ry="5" fill="#000" opacity=".22"/>';
+const bigTree = () =>
+  trunk(19, 200, 7) + branch(198, 255, 136, 182, 10) + branch(202, 238, 264, 172, 10) + branch(200, 215, 200, 126, 8) +
+  branch(199, 274, 122, 230, 6) + branch(201, 262, 282, 222, 6) + canopy(200, 158, 138, 98, 12, 21);
+
+const DRAW = [
+  () => ({ r: "", a: dimple + seed(200, 347, -14, 1, false) }),
+  () => ({ r: roots(6, 0, "#f3e6c8", 2.4), a: dimple + seed(200, 346, -14, 1.2, true) }),
+  () => ({ r: roots(28, 2, "#f3e6c8", 3), a: dimple + seed(200, 345, -14, 1.2, true) + '<path d="M204 338q1-10 9-11" fill="none" stroke="#c5e38a" stroke-width="3.6" stroke-linecap="round"/>' }),
+  () => ({ r: roots(44, 4, "#efdfbd", 3.4), a: dimple + seed(222, 349, 25, .8, true) + stem(300, 6, "#a9d36b") + '<path d="M200 300C199 289 189 286 184 294" fill="none" stroke="#a9d36b" stroke-width="6" stroke-linecap="round"/>' }),
+  () => ({ r: roots(54, 5, "#e9d6ae", 3.6), a: stem(276, 6.5) + leaf(200, 279, 36, -162, G2, .62) + leaf(200, 279, 36, -18, G2, .62) + '<circle cx="200" cy="274" r="3.5" fill="#b9e27c"/>' }),
+  () => ({ r: roots(62, 6, "#e4cfa3", 4), a: stem(232, 7.5) + leaf(200, 306, 24, -172, "#b5d77a", .6) + leaf(200, 306, 24, -8, "#b5d77a", .6) +
+      leaf(200, 268, 42, -155, G2) + leaf(200, 268, 42, -25, G2) + leaf(200, 238, 30, -125, G1) + leaf(200, 238, 30, -55, G1) }),
+  () => ({ r: roots(72, 7, "#d9bd8c", 4.6), a: stem(188, 10, "#7fae45") + '<path d="M200 353C198 332 202 318 201 300" fill="none" stroke="#9a6a3c" stroke-width="10" stroke-linecap="round"/>' +
+      leaf(201, 318, 48, -172, G3) + leaf(201, 296, 50, -10, G3) + leaf(201, 270, 46, -165, G2) + leaf(201, 248, 46, -18, G2) +
+      leaf(201, 226, 40, -150, G2) + leaf(201, 208, 38, -32, G1) + leaf(200, 190, 30, -112, G1) + leaf(200, 190, 30, -68, G1) }),
+  () => ({ r: roots(80, 8, "#b58b5c", 5.5), a: trunk(12, 232, 5) + branch(199, 262, 158, 204, 6) + branch(201, 250, 240, 198, 6) + branch(200, 238, 198, 172, 5) +
+      canopy(200, 188, 90, 64, 8, 11) }),
+  () => ({ r: roots(84, 9, "#a77b4c", 6.5), a: bigTree() + pts(200, 156, 118, 82, 18, 31).map(p => blossom(p[0], p[1])).join("") }),
+  () => ({ r: roots(84, 9, "#a77b4c", 6.5), a: fruit(152, 351) + fruit(250, 355) + bigTree() +
+      pts(200, 156, 118, 82, 5, 57).map(p => blossom(p[0], p[1])).join("") + pts(200, 160, 120, 84, 14, 33).map(p => fruit(p[0], p[1])).join("") })
+];
+
+/* static soil details */
+(function soilDetails() {
+  const r = rng(3); let s = "";
+  for (let i = 0; i < 46; i++) {
+    const x = 60 + r() * 280, y = 362 + r() * 78;
+    s += `<ellipse cx="${f1(x)}" cy="${f1(y)}" rx="${f1(1.5 + r() * 3.5)}" ry="${f1(1 + r() * 2)}" fill="${r() > .5 ? "#7d5233" : "#3f2414"}" opacity=".75"/>`;
+  }
+  s += '<path d="M52 380Q130 392 200 386T348 382" stroke="#4a2b17" stroke-width="3" fill="none" opacity=".5"/><path d="M60 412Q140 420 200 416T340 410" stroke="#4a2b17" stroke-width="3" fill="none" opacity=".4"/>';
+  $("#pebbles").innerHTML = s;
+  let g = "";
+  [[56, 1], [76, 1], [328, -1], [346, -1], [118, 1], [290, -1]].forEach(([x, d], i) => {
+    for (let k = 0; k < 4; k++) {
+      const h = 10 + ((i * 7 + k * 5) % 9), lean = (k - 1.5) * 3 * d;
+      g += `<path d="M${x + k * 3} 351q${lean} ${-h * .5} ${lean * 1.6} ${-h}" stroke="${k % 2 ? "#5aa845" : "#7cc35a"}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`;
+    }
+  });
+  $("#grass").innerHTML = g;
+})();
+
+/* ---------- DOM refs ---------- */
+const garden = $("#garden"), board = $("#board"), canEl = $("#can"), canvas = $("#fx"), ctx = canvas.getContext("2d");
+const plantG = $("#plant"), rootsG = $("#roots"), popG = $("#plantPop"), soilTop = $("#soilTop"), soilBody = $("#soilBody");
+
+const track = $("#track");
+STAGES.forEach((s, i) => { const li = document.createElement("li"); li.textContent = toAr(i + 1); li.title = s.name; track.appendChild(li); });
+const pipsEl = $("#pips");
+CONFIG.stations.forEach(() => pipsEl.appendChild(document.createElement("i")));
+
+/* ---------- stations ---------- */
+const list = $("#stations");
+let openId = null;
+CONFIG.stations.forEach((st, i) => {
+  const li = document.createElement("li");
+  li.className = "station"; li.dataset.id = st.id;
+  li.innerHTML = `
+    <button class="st-head" type="button" aria-expanded="false" aria-controls="drop-${st.id}">
+      <span class="st-ico">${ICONS[st.icon] || ICONS.star}</span>
+      <span class="st-text"><span class="st-name">${st.name}</span><span class="st-status"></span></span>
+      <span class="st-chev">${CHEV}</span>
+    </button>
+    <div class="st-drop" id="drop-${st.id}"><div class="st-drop-in">
+      <form class="st-form" novalidate>
+        <label for="code-${st.id}">اكتب كلمة السر</label>
+        <div class="st-row">
+          <input id="code-${st.id}" name="code" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="• • •">
+          <button type="submit" class="st-go">افتح الماء</button>
+        </div>
+        <p class="st-msg" aria-live="polite"></p>
+      </form>
+      <p class="st-donemsg">تم استخدام كلمة السر لهذه المحطة، وامتلأ الإبريق من مائها.</p>
+    </div></div>`;
+  list.appendChild(li);
+  const head = li.querySelector(".st-head"), drop = li.querySelector(".st-drop"), form = li.querySelector("form"),
+        input = li.querySelector("input"), msg = li.querySelector(".st-msg");
+  drop.inert = true;
+  head.addEventListener("click", () => toggleStation(st.id));
+  form.addEventListener("submit", e => {
+    e.preventDefault();
+    const v = norm(input.value);
+    if (!v) { setMsg(msg, "اكتب كلمة السر أولًا.", "bad"); input.focus(); return; }
+    if (v === norm(st.code)) {
+      unlock(st);
+      setMsg(msg, "أحسنت! امتلأ الإبريق، اذهب واسقِ البذرة.", "ok");
+      input.value = "";
+      setTimeout(() => { if (openId === st.id) toggleStation(st.id); }, 1500);
+    } else {
+      setMsg(msg, "كلمة السر غير صحيحة. تأكّد منها وحاول مرة أخرى.", "bad");
+      li.classList.remove("shake"); void li.offsetWidth; li.classList.add("shake");
+      input.select();
+    }
+  });
+  li.addEventListener("animationend", () => li.classList.remove("shake"));
+});
+function setMsg(el, t, kind) { el.textContent = t; el.className = "st-msg " + kind; }
+function toggleStation(id) {
+  const next = openId === id ? null : id;
+  list.querySelectorAll(".station").forEach(li => {
+    const on = li.dataset.id === next;
+    li.classList.toggle("open", on);
+    li.querySelector(".st-head").setAttribute("aria-expanded", on);
+    li.querySelector(".st-drop").inert = !on;
+    if (!on) setMsg(li.querySelector(".st-msg"), "", "");
+  });
+  openId = next;
+  if (next) {
+    const li = list.querySelector(`[data-id="${next}"]`), inp = li.querySelector("input");
+    if (!li.classList.contains("done")) setTimeout(() => inp.focus({ preventScroll: true }), 120);
+    setTimeout(() => li.scrollIntoView({ block: "nearest", behavior: "smooth" }), 330);
+  }
+}
+function unlock(st) {
+  if (state.unlocked.includes(st.id)) return;
+  state.unlocked.push(st.id);
+  state.water += WPS;
+  save(true);
+  renderStations();
+  toast("فُتح الماء من " + st.name, "امتلأ الإبريق!", 2600);
+  canEl.classList.remove("filling"); void canEl.offsetWidth; canEl.classList.add("filling");
+}
+canEl.addEventListener("animationend", e => { if (e.animationName === "fill") canEl.classList.remove("filling"); }, true);
+function renderStations() {
+  const n = state.unlocked.length;
+  list.querySelectorAll(".station").forEach(li => {
+    const done = state.unlocked.includes(li.dataset.id);
+    li.classList.toggle("done", done);
+    li.querySelector(".st-status").innerHTML = done ? CHECK + "فُتح الماء" : LOCK + "مقفلة، تحتاج كلمة السر";
+  });
+  $("#openCount").textContent = `المحطات المفتوحة: ${toAr(n)} من ${toAr(CONFIG.stations.length)}`;
+  [...pipsEl.children].forEach((p, i) => p.classList.toggle("on", i < n));
+}
+
+/* ---------- toast ---------- */
+const toastEl = $("#toast"); let toastQ = [], toastBusy = false;
+function toast(small, big, ms = 2400) { toastQ.push([small, big, ms]); if (!toastBusy) nextToast(); }
+function nextToast() {
+  const t = toastQ.shift(); if (!t) { toastBusy = false; return; }
+  toastBusy = true;
+  $("#toastSmall").textContent = t[0]; $("#toastBig").textContent = t[1];
+  toastEl.classList.add("show");
+  setTimeout(() => { toastEl.classList.remove("show"); setTimeout(nextToast, 320); }, t[2]);
+}
+
+/* ---------- plant + HUD ---------- */
+const stageOf = p => Math.min(MAX, Math.floor(p + 1e-6));
+let curStage = -1, complete = false;
+function setStage(i, animate) {
+  curStage = i;
+  const d = DRAW[i]();
+  plantG.innerHTML = d.a; rootsG.innerHTML = d.r;
+  $("#stageAria").textContent = "المرحلة " + toAr(i + 1) + ": " + STAGES[i].name;
+  $("#stageNum").textContent = `المرحلة ${toAr(i + 1)} من ${toAr(STAGES.length)}`;
+  $("#stageName").textContent = STAGES[i].name;
+  [...track.children].forEach((li, k) => { li.classList.toggle("done", k < i || (k === i && i === MAX)); li.classList.toggle("now", k === i && i !== MAX); });
+  const tk = $("#ticker");
+  if (animate) { tk.classList.add("fade"); setTimeout(() => { tk.textContent = STAGES[i].desc; tk.classList.remove("fade"); }, 350); }
+  else tk.textContent = STAGES[i].desc;
+  if (animate) {
+    popG.classList.remove("pop"); void popG.getBoundingClientRect(); popG.classList.add("pop");
+    burst();
+    if (i < MAX) toast("مرحلة جديدة!", toAr(i + 1) + ". " + STAGES[i].name);
+  }
+}
+popG.addEventListener("animationend", () => popG.classList.remove("pop"));
+
+function updatePlantScale() {
+  const frac = curStage >= MAX ? 1 : state.progress - curStage;
+  const s = (curStage >= 7 ? .93 : .88) + (curStage >= 7 ? .07 : .12) * Math.min(1, frac);
+  plantG.setAttribute("transform", `translate(200 352) scale(${s.toFixed(3)}) translate(-200 -352)`);
+  $("#nextBar").style.width = (curStage >= MAX ? 100 : Math.min(1, frac) * 100) + "%";
+}
+
+let hintState = "";
+function updateHUD(pouring, aimed) {
+  const w = state.water;
+  $("#waterBar").style.width = Math.min(1, w / WPS) * 100 + "%";
+  const extra = Math.ceil(w / WPS - 1e-6) - 1;
+  $("#waterTxt").textContent = w <= 0 ? "فارغ" : toAr(Math.max(1, Math.round(Math.min(1, w / WPS) * 100))) + "٪" + (extra > 0 ? ` + ${toAr(extra)} إبريق` : "");
+  let h;
+  if (complete) h = "أثمرت الشجرة! أحسنتم يا أبطال";
+  else if (w > 0 && pouring) h = aimed ? "رائع! استمرّ في السقي…" : "وجّه الإبريق فوق التربة";
+  else if (w > 0) h = "اضغط مطوّلًا واسحب الإبريق فوق التربة لتسقي البذرة";
+  else if (state.unlocked.length === 0) h = "اختر محطة من لوحة المحطات واكتب كلمة السر لتحصل على الماء";
+  else h = "انتهى الماء. افتح محطة جديدة بكلمة السر";
+  if (h !== hintState) { $("#hint").textContent = h; hintState = h; }
+  $("#gauge").classList.toggle("done", complete);
+  canEl.classList.toggle("empty", w <= 0 && !complete);
+  canEl.classList.toggle("ready", w > 0 && !pouring && !complete);
+}
+
+/* ---------- geometry ---------- */
+let GW = 0, GH = 0, DPR = 1, soil = { l: 0, r: 0, cx: 0, cy: 0 };
+function measure() {
+  const g = garden.getBoundingClientRect();
+  GW = g.width; GH = g.height; DPR = Math.min(2, window.devicePixelRatio || 1);
+  canvas.width = Math.round(GW * DPR); canvas.height = Math.round(GH * DPR);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const s = soilTop.getBoundingClientRect();
+  soil = { l: s.left - g.left, r: s.right - g.left, cx: (s.left + s.right) / 2 - g.left, cy: (s.top + s.bottom) / 2 - g.top };
+}
+new ResizeObserver(measure).observe(garden);
+window.addEventListener("resize", measure);
+
+/* ---------- watering can + input ---------- */
+const can = { x: -200, y: -200, a: 0 };
+const ptr = { x: 0, y: 0 };
+let dragging = false, keyPour = false, lastNudge = 0;
+function restPos() {
+  return { x: Math.max(66, soil.l - 6), y: soil.cy - 26 };
+}
+function setPtr(e) { const g = garden.getBoundingClientRect(); ptr.x = e.clientX - g.left; ptr.y = e.clientY - g.top; }
+function needWater() {
+  const now = performance.now();
+  if (now - lastNudge < 2500) return;
+  lastNudge = now;
+  board.classList.remove("nudge"); void board.offsetWidth; board.classList.add("nudge");
+  toast("الإبريق فارغ", "افتح محطة بكلمة السر");
+}
+board.addEventListener("animationend", e => { if (e.animationName === "nudge") board.classList.remove("nudge"); });
+garden.addEventListener("pointerdown", e => {
+  if (e.button > 0 || complete) return;
+  if (state.water <= 0) { needWater(); return; }
+  dragging = true; setPtr(e);
+  garden.setPointerCapture(e.pointerId);
+  garden.classList.add("pouring");
+  e.preventDefault();
+});
+garden.addEventListener("pointermove", e => { if (dragging) setPtr(e); });
+const endDrag = () => { dragging = false; garden.classList.remove("pouring"); save(true); };
+garden.addEventListener("pointerup", endDrag);
+garden.addEventListener("pointercancel", endDrag);
+canEl.addEventListener("keydown", e => {
+  if (e.key !== " " && e.key !== "Enter") return;
+  e.preventDefault();
+  if (e.repeat) return;
+  if (state.water <= 0 && !complete) { needWater(); return; }
+  keyPour = true;
+});
+canEl.addEventListener("keyup", e => { if (e.key === " " || e.key === "Enter") { keyPour = false; save(true); } });
+canEl.addEventListener("blur", () => { keyPour = false; });
+canEl.addEventListener("click", e => e.preventDefault());
+
+/* ---------- particles ---------- */
+let parts = [], wet = 0, dropAcc = 0, appliedWet = -1;
+const COLORS = ["#f4c34f", "#7cc35a", "#86d6ff", "#ffd3e0", "#fff6e3", "#e0453a"];
+function burst() {
+  const p = plantG.getBoundingClientRect(), g = garden.getBoundingClientRect();
+  const cx = (p.left + p.right) / 2 - g.left, cy = (p.top + p.bottom) / 2 - g.top;
+  for (let i = 0; i < 34; i++) {
+    const a = Math.random() * 6.283, v = 90 + Math.random() * 220;
+    parts.push({ t: "spark", x: cx, y: cy, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 60, life: 1, rot: Math.random() * 6, s: 5 + Math.random() * 6 });
+  }
+}
+function confetti() {
+  for (let i = 0; i < 160; i++) {
+    parts.push({ t: "conf", x: Math.random() * GW, y: -20 - Math.random() * GH * .6, vx: (Math.random() - .5) * 60, vy: 60 + Math.random() * 90,
+      life: 1, rot: Math.random() * 6, vr: (Math.random() - .5) * 8, s: 6 + Math.random() * 6, c: COLORS[i % COLORS.length], leaf: i % 3 === 0 });
+  }
+}
+function star(x, y, r, rot) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.beginPath();
+  for (let i = 0; i < 8; i++) { const rr = i % 2 ? r * .38 : r, a = i * Math.PI / 4; ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
+  ctx.closePath(); ctx.fill(); ctx.restore();
+}
+function lerpColor(a, b, t) {
+  const pa = a.match(/\w\w/g).map(h => parseInt(h, 16)), pb = b.match(/\w\w/g).map(h => parseInt(h, 16));
+  return "#" + pa.map((v, i) => Math.round(v + (pb[i] - v) * t).toString(16).padStart(2, "0")).join("");
+}
+
+/* ---------- main loop ---------- */
+let last = performance.now();
+function tick(now) {
+  const dt = Math.min(.05, (now - last) / 1000); last = now;
+
+  const pourIntent = (dragging || keyPour) && !complete;
+  let tx, ty;
+  if (dragging) { tx = ptr.x + 54; ty = ptr.y - 46; }
+  else if (keyPour) { tx = soil.cx - (soil.r - soil.l) * .12 + 58; ty = soil.cy - 110; }
+  else { const r = restPos(); tx = r.x; ty = r.y; }
+  tx = Math.max(10, Math.min(GW + 40, tx)); ty = Math.max(30, Math.min(GH - 20, ty));
+  if (can.x < -100) { can.x = tx; can.y = ty; }
+  const k = Math.min(1, dt * (dragging ? 20 : 7));
+  can.x += (tx - can.x) * k; can.y += (ty - can.y) * k;
+  const pouring = pourIntent && state.water > 0;
+  can.a += ((pouring ? -36 : 0) - can.a) * Math.min(1, dt * 10);
+  canEl.style.transform = `translate(${(can.x - 60).toFixed(1)}px,${(can.y - 48).toFixed(1)}px) rotate(${can.a.toFixed(2)}deg)`;
+
+  const rad = can.a * Math.PI / 180, lx = -49, ly = -14;
+  const sx = can.x + lx * Math.cos(rad) - ly * Math.sin(rad), sy = can.y + lx * Math.sin(rad) + ly * Math.cos(rad);
+  let aimed = false;
+  if (pouring && can.a < -18) {
+    dropAcc += dt * 60;
+    while (dropAcc > 1) {
+      dropAcc--;
+      parts.push({ t: "drop", x: sx + (Math.random() - .5) * 6, y: sy + (Math.random() - .5) * 4, vx: -55 + Math.random() * 40, vy: 40 + Math.random() * 50, life: 1 });
+    }
+    aimed = sx > soil.l + 14 && sx < soil.r - 14 && sy < soil.cy;
+    if (aimed) {
+      const d = Math.min(state.water, RATE * dt, MAX - state.progress);
+      state.water -= d; state.progress += d;
+      if (state.water < 1e-4) { state.water = 0; toast("انتهى ماء الإبريق", state.progress >= MAX - 1e-4 ? "أحسنتم!" : "افتح محطة أخرى"); }
+      if (state.progress >= MAX - 1e-4) state.progress = MAX;
+      const st = stageOf(state.progress);
+      if (st !== curStage) setStage(st, true);
+      if (state.progress >= MAX && !complete) finish(true);
+      save();
+    }
+  }
+  updatePlantScale();
+  updateHUD(pouring, aimed);
+
+  wet = Math.max(0, wet - dt * .05);
+  if (Math.abs(wet - appliedWet) > .01) {
+    appliedWet = wet;
+    soilTop.setAttribute("fill", lerpColor("7a4c2c", "4a2a16", Math.min(1, wet)));
+    soilBody.setAttribute("fill", lerpColor("5b3620", "3b2112", Math.min(1, wet)));
+  }
+
+  ctx.clearRect(0, 0, GW, GH);
+  const next = [];
+  for (const p of parts) {
+    if (p.t === "drop") {
+      p.vy += 900 * dt; p.x += p.vx * dt; p.y += p.vy * dt;
+      if (p.y >= soil.cy && p.x > soil.l + 6 && p.x < soil.r - 6) {
+        wet = Math.min(1.2, wet + .012);
+        for (let i = 0; i < 2; i++) next.push({ t: "splash", x: p.x, y: soil.cy, vx: (Math.random() - .5) * 90, vy: -60 - Math.random() * 60, life: 1 });
+        continue;
+      }
+      if (p.y > GH + 10) continue;
+      ctx.fillStyle = "rgba(134,214,255,.95)";
+      ctx.beginPath(); ctx.ellipse(p.x, p.y, 2.6, 4.4, Math.atan2(p.vy, p.vx) - Math.PI / 2, 0, 6.283); ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,.8)";
+      ctx.beginPath(); ctx.arc(p.x - .8, p.y - 1, .9, 0, 6.283); ctx.fill();
+    } else if (p.t === "splash") {
+      p.life -= dt * 3; if (p.life <= 0) continue;
+      p.vy += 500 * dt; p.x += p.vx * dt; p.y += p.vy * dt;
+      ctx.fillStyle = `rgba(170,225,255,${p.life})`;
+      ctx.beginPath(); ctx.arc(p.x, p.y, 1.6, 0, 6.283); ctx.fill();
+    } else if (p.t === "spark") {
+      p.life -= dt * 1.1; if (p.life <= 0) continue;
+      p.vx *= .97; p.vy = p.vy * .97 + 40 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.rot += dt * 3;
+      ctx.fillStyle = `rgba(255,224,130,${p.life})`;
+      star(p.x, p.y, p.s * (.5 + p.life * .5), p.rot);
+    } else if (p.t === "conf") {
+      p.y += p.vy * dt; p.x += p.vx * dt + Math.sin(now / 400 + p.rot) * .6; p.rot += p.vr * dt;
+      if (p.y > GH + 20) continue;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.c;
+      if (p.leaf) { ctx.beginPath(); ctx.ellipse(0, 0, p.s, p.s * .45, 0, 0, 6.283); ctx.fill(); }
+      else ctx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2);
+      ctx.restore();
+    }
+    next.push(p);
+  }
+  parts = next;
+  requestAnimationFrame(tick);
+}
+
+function finish(animate) {
+  complete = true; dragging = false; keyPour = false;
+  garden.classList.remove("pouring");
+  save(true);
+  if (animate) {
+    confetti();
+    toast("مبارك!", "أثمرت شجرتكم", 4000);
+  }
+}
+
+/* ---------- reset (two taps, for the teacher) ---------- */
+const resetBtn = $("#reset"); let resetTimer = 0;
+resetBtn.addEventListener("click", () => {
+  if (!resetBtn.classList.contains("arm")) {
+    resetBtn.classList.add("arm"); resetBtn.textContent = "اضغط مرة أخرى للتأكيد";
+    resetTimer = setTimeout(() => { resetBtn.classList.remove("arm"); resetBtn.textContent = "بدء من جديد"; }, 3500);
+    return;
+  }
+  clearTimeout(resetTimer);
+  resetBtn.classList.remove("arm"); resetBtn.textContent = "بدء من جديد";
+  state = { unlocked: [], water: 0, progress: 0 };
+  complete = false; parts = []; wet = 0;
+  save(true);
+  if (openId) toggleStation(openId);
+  renderStations(); setStage(0, false);
+});
+
+/* ---------- start ---------- */
+measure();
+renderStations();
+setStage(stageOf(state.progress), false);
+if (state.progress >= MAX) finish(false);
+requestAnimationFrame(t => { last = t; measure(); requestAnimationFrame(tick); });
+</script>
+</body>
+</html>
