@@ -225,6 +225,8 @@ button,input{font:inherit;color:inherit}
 .st-row{display:flex;gap:8px}
 .st-row input{flex:1;min-width:0;height:44px;padding:0 12px;border-radius:6px;border:2px solid var(--wood-900);background:var(--parch);color:var(--ink-dark);
   font-size:20px;font-weight:800;letter-spacing:2px;text-align:center;box-shadow:inset 0 2px 4px rgba(0,0,0,.25)}
+.st-row input.text{font-size:17px;letter-spacing:0;text-align:start}
+.st-step{color:var(--gold)}
 .st-row input::placeholder{color:#a88a62;letter-spacing:4px}
 .st-go{flex:none;height:44px;padding:0 14px;border-radius:6px;border:0;cursor:pointer;font-weight:800;color:#0b2a3b;
   background:linear-gradient(180deg,#d4f2ff,var(--water) 55%,#4fb2e2);box-shadow:inset 0 -3px 0 rgba(0,0,0,.2),0 2px 0 rgba(0,0,0,.4)}
@@ -372,7 +374,13 @@ button,input{font:inherit;color:inherit}
 /* ===================== الإعدادات: غيّر أسماء المحطات وكلمات السر من هنا ===================== */
 const CONFIG = {
   stations: [
-    { id: "s1", name: "محطة الشمس",  icon: "sun",      code: "101" },
+    { id: "s1", name: "الحجرة المظلمة", icon: "door", steps: [
+      { label: "اكتبوا السؤال الذي وجدتموه في الحجرة", button: "أرسل السؤال", water: 0.4,
+        accept: ["اسم البيعة التي كانت تحت الشجرة"], keywords: ["بيعة", "شجرة"],
+        success: "أحسنتم! حصلتم على بعض الماء. والآن ابحثوا عن الجواب.", wrong: "هذا ليس السؤال الموجود في الحجرة. اقرؤوه جيدًا واكتبوه مرة أخرى." },
+      { label: "اكتبوا الجواب", button: "أرسل الجواب", water: 0.6,
+        accept: ["الرضوان", "رضوان", "بيعة الرضوان"] }
+    ] },
     { id: "s2", name: "محطة الغيمة", icon: "cloud",    code: "202" },
     { id: "s3", name: "محطة الجبل",  icon: "mountain", code: "303" },
     { id: "s4", name: "محطة النجمة", icon: "star",     code: "404" },
@@ -409,6 +417,7 @@ const ICONS = {
   mountain: '<svg viewBox="0 0 24 24"><path d="M1.5 20 9 6.5l4.2 7.4 2.3-3.4L22.5 20z" fill="currentColor"/><path d="M9 6.5l2.2 3.9-2.2 1.5-2.1-1.4z" fill="#fff" opacity=".85"/></svg>',
   star: '<svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z" fill="currentColor"/></svg>',
   moon: '<svg viewBox="0 0 24 24"><path d="M15.5 2.8a9 9 0 1 0 6 15.6A7.4 7.4 0 0 1 15.5 2.8z" fill="currentColor"/></svg>',
+  door: '<svg viewBox="0 0 24 24"><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16" fill="currentColor"/><path d="M3 21h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 6h8v15H8z" fill="#0f3349"/><circle cx="14" cy="13.5" r="1.2" fill="currentColor"/></svg>',
   drop: '<svg viewBox="0 0 24 24"><path d="M12 2.5S5.5 10 5.5 14.6a6.5 6.5 0 0 0 13 0C18.5 10 12 2.5 12 2.5z" fill="currentColor"/><path d="M9 14.5a3 3 0 0 0 3 3" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".8"/></svg>'
 };
 const LOCK = '<svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2" fill="currentColor"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="currentColor" stroke-width="2.4"/></svg>';
@@ -432,13 +441,14 @@ const RATE = WPS / CONFIG.pourSeconds;               // growth per second of aim
 
 /* ---------- state ---------- */
 const KEY = "bustan-albithra-v1";
-let state = { unlocked: [], water: 0, progress: 0, team: "", gameId: "", adj: 0 };
+let state = { unlocked: [], water: 0, progress: 0, team: "", gameId: "", adj: 0, steps: {} };
 try {
   const s = JSON.parse(localStorage.getItem(KEY));
   if (s && Array.isArray(s.unlocked)) {
     state.team = typeof s.team === "string" ? s.team.slice(0, 30) : "";
     state.gameId = typeof s.gameId === "string" ? s.gameId : "";
     state.unlocked = s.unlocked.filter(id => CONFIG.stations.some(x => x.id === id));
+    state.steps = s.steps && typeof s.steps === "object" ? s.steps : {};
     state.water = Math.max(0, +s.water || 0);
     state.progress = Math.min(MAX, Math.max(0, +s.progress || 0));
     state.adj = Number(s.adj) || 0;
@@ -592,26 +602,42 @@ CONFIG.stations.forEach(() => pipsEl.appendChild(document.createElement("i")));
 /* ---------- stations ---------- */
 const list = $("#stations");
 let openId = null;
+// A station is one or more steps; each step gives part of the station's water.
+// A plain station is one step: its password.
+const stepsOf = st => st.steps && st.steps.length ? st.steps
+  : [{ label: "اكتب كلمة السر", button: "افتح الماء", accept: [st.code], water: 1, code: true }];
+const stepsDone = st => Math.min(stepsOf(st).length, state.steps[st.id] || (state.unlocked.includes(st.id) ? stepsOf(st).length : 0));
+// lenient compare for typed questions and answers: no vowel marks, punctuation or spaces
+const norm2 = v => norm(v).replace(/[\u064B-\u0652\u0670\u0640]/g, "").replace(/[؟?!.,،:؛"'«»()\-_]/g, "")
+  .replace(/ة/g, "ه").replace(/ى/g, "ي").replace(/ؤ/g, "و").replace(/ئ/g, "ي");
+function stepMatches(step, raw) {
+  const v = norm2(raw);
+  if (!v) return false;
+  if ((step.accept || []).some(a => norm2(a) === v)) return true;
+  return !!(step.keywords && step.keywords.length && step.keywords.every(k => v.includes(norm2(k))));
+}
+
 CONFIG.stations.forEach((st, i) => {
   const li = document.createElement("li");
   li.className = "station"; li.dataset.id = st.id;
   li.innerHTML = `
     <button class="st-head" type="button" aria-expanded="false" aria-controls="drop-${st.id}">
       <span class="st-ico">${ICONS[st.icon] || ICONS.star}</span>
-      <span class="st-text"><span class="st-name">${st.name}</span><span class="st-status"></span></span>
+      <span class="st-text"><span class="st-name"></span><span class="st-status"></span></span>
       <span class="st-chev">${CHEV}</span>
     </button>
     <div class="st-drop" id="drop-${st.id}"><div class="st-drop-in">
       <form class="st-form" novalidate>
-        <label for="code-${st.id}">اكتب كلمة السر</label>
+        <label for="code-${st.id}"><span class="st-step"></span><span class="st-label"></span></label>
         <div class="st-row">
-          <input id="code-${st.id}" name="code" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="• • •">
-          <button type="submit" class="st-go">افتح الماء</button>
+          <input id="code-${st.id}" name="code" autocomplete="off" autocapitalize="off" spellcheck="false">
+          <button type="submit" class="st-go"></button>
         </div>
         <p class="st-msg" aria-live="polite"></p>
       </form>
-      <p class="st-donemsg">تم استخدام كلمة السر لهذه المحطة، وامتلأ الإبريق من مائها.</p>
+      <p class="st-donemsg"></p>
     </div></div>`;
+  li.querySelector(".st-name").textContent = st.name;
   list.appendChild(li);
   const head = li.querySelector(".st-head"), drop = li.querySelector(".st-drop"), form = li.querySelector("form"),
         input = li.querySelector("input"), msg = li.querySelector(".st-msg");
@@ -619,15 +645,21 @@ CONFIG.stations.forEach((st, i) => {
   head.addEventListener("click", () => toggleStation(st.id));
   form.addEventListener("submit", e => {
     e.preventDefault();
-    const v = norm(input.value);
-    if (!v) { setMsg(msg, "اكتب كلمة السر أولًا.", "bad"); input.focus(); return; }
-    if (v === norm(st.code)) {
-      unlock(st);
-      setMsg(msg, "أحسنت! امتلأ الإبريق، اذهب واسقِ البذرة.", "ok");
+    const steps = stepsOf(st), k = stepsDone(st), step = steps[k];
+    if (!step) return;
+    if (!norm2(input.value)) { setMsg(msg, step.code ? "اكتب كلمة السر أولًا." : "اكتبوا الإجابة أولًا.", "bad"); input.focus(); return; }
+    if (stepMatches(step, input.value)) {
       input.value = "";
-      setTimeout(() => { if (openId === st.id) toggleStation(st.id); }, 1500);
+      const last = unlockStep(st, k);
+      if (last) {
+        setMsg(msg, "أحسنتم! امتلأ الإبريق، اذهبوا واسقوا البذرة.", "ok");
+        setTimeout(() => { if (openId === st.id) toggleStation(st.id); }, 1500);
+      } else {
+        setMsg(msg, step.success || "أحسنتم! حصلتم على بعض الماء.", "ok");
+        input.focus({ preventScroll: true });
+      }
     } else {
-      setMsg(msg, "كلمة السر غير صحيحة. تأكّد منها وحاول مرة أخرى.", "bad");
+      setMsg(msg, step.wrong || (step.code ? "كلمة السر غير صحيحة. تأكّد منها وحاول مرة أخرى." : "الإجابة غير صحيحة. حاولوا مرة أخرى."), "bad");
       li.classList.remove("shake"); void li.offsetWidth; li.classList.add("shake");
       input.select();
     }
@@ -651,23 +683,38 @@ function toggleStation(id) {
     setTimeout(() => li.scrollIntoView({ block: "nearest", behavior: "smooth" }), 330);
   }
 }
-function unlock(st) {
-  if (state.unlocked.includes(st.id)) return;
-  state.unlocked.push(st.id);
-  state.water += WPS;
+// returns true when this was the station's last step
+function unlockStep(st, k) {
+  const steps = stepsOf(st);
+  if (stepsDone(st) !== k) return false;
+  state.steps[st.id] = k + 1;
+  state.water += WPS * (steps[k].water != null ? steps[k].water : 1 / steps.length);
+  const last = k + 1 >= steps.length;
+  if (last && !state.unlocked.includes(st.id)) state.unlocked.push(st.id);
   save(true);
   report();
   renderStations();
-  toast("فُتح الماء من " + st.name, "امتلأ الإبريق!", 2600);
+  toast((last ? "امتلأ الإبريق من " : "ماء من ") + st.name, last ? "اسقوا البذرة!" : "حصلتم على بعض الماء", 2600);
   canEl.classList.remove("filling"); void canEl.offsetWidth; canEl.classList.add("filling");
+  return last;
 }
 canEl.addEventListener("animationend", e => { if (e.animationName === "fill") canEl.classList.remove("filling"); }, true);
 function renderStations() {
   const n = state.unlocked.length;
   list.querySelectorAll(".station").forEach(li => {
-    const done = state.unlocked.includes(li.dataset.id);
+    const st = CONFIG.stations.find(x => x.id === li.dataset.id), steps = stepsOf(st), k = stepsDone(st);
+    const done = k >= steps.length, multi = steps.length > 1;
     li.classList.toggle("done", done);
-    li.querySelector(".st-status").innerHTML = done ? CHECK + "فُتح الماء" : LOCK + "مقفلة، تحتاج كلمة السر";
+    li.querySelector(".st-status").innerHTML = done ? CHECK + "فُتح الماء"
+      : k > 0 ? LOCK + `أُنجزت ${toAr(k)} من ${toAr(steps.length)}، بقيت خطوة`
+      : LOCK + (multi ? "مقفلة، فيها " + toAr(steps.length) + " خطوات" : "مقفلة، تحتاج كلمة السر");
+    const step = steps[Math.min(k, steps.length - 1)];
+    li.querySelector(".st-step").textContent = multi && !done ? `الخطوة ${toAr(k + 1)} من ${toAr(steps.length)}: ` : "";
+    li.querySelector(".st-label").textContent = step.label;
+    li.querySelector(".st-go").textContent = step.button || "تحقّق";
+    li.querySelector("input").placeholder = step.code ? "• • •" : (step.placeholder || "");
+    li.querySelector("input").classList.toggle("text", !step.code);
+    li.querySelector(".st-donemsg").textContent = multi ? "أنجزتم كل خطوات هذه المحطة، وامتلأ الإبريق من مائها." : "تم استخدام كلمة السر لهذه المحطة، وامتلأ الإبريق من مائها.";
   });
   $("#openCount").textContent = `المحطات المفتوحة: ${toAr(n)} من ${toAr(CONFIG.stations.length)}`;
   [...pipsEl.children].forEach((p, i) => p.classList.toggle("on", i < n));
@@ -985,7 +1032,7 @@ resetBtn.addEventListener("click", () => {
   }
   clearTimeout(resetTimer);
   resetBtn.classList.remove("arm"); resetBtn.textContent = "بدء من جديد";
-  state = { unlocked: [], water: 0, progress: 0, team: "", gameId: state.gameId, adj: state.adj };
+  state = { unlocked: [], water: 0, progress: 0, team: "", gameId: state.gameId, adj: state.adj, steps: {} };
   complete = false; parts = []; wet = 0;
   save(true);
   if (openId) toggleStation(openId);
@@ -1050,7 +1097,7 @@ async function pollRound() {
   if (!s || Array.isArray(s) || !s.status) { round.status = "running"; renderRound(); return; }  // older script without rounds
   if (s.gameId && state.gameId && s.gameId !== state.gameId) {
     // the teacher started a new game: start this device over
-    state = { unlocked: [], water: 0, progress: 0, team: "", gameId: s.gameId, adj: 0 };
+    state = { unlocked: [], water: 0, progress: 0, team: "", gameId: s.gameId, adj: 0, steps: {} };
     vis.adj = 0; hold = 0; items = []; Object.keys(inFlight).forEach(k => delete inFlight[k]); renderItems();
     complete = false; parts = []; wet = 0;
     save(true);
