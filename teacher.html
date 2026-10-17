@@ -6,12 +6,13 @@
 <title>لوحة المعلّم</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@400;600;800&family=Lalezar&display=swap">
 <style>
-/* Layout: one wooden header, then a grid of team cards ordered by how far each team has grown. */
+/* Layout: wooden header with the round controls, then one of three views:
+   team cards, the live bar chart, or (after the game ends) the round-by-round replay. */
 :root{
   --wood-900:#2e190c; --wood-700:#5a331a; --wood-500:#8a5530; --wood-300:#c08a52;
   --sky-900:#0f3349; --sky-700:#1c5878;
-  --parch:#f2e6c9; --parch-2:#dcc69b; --ink:#fff6e3; --ink-dark:#3a2414; --ink-mut:#c9dde8;
-  --leaf:#6dbb4f; --leaf-deep:#2f6b2a; --gold:#f4c34f; --water:#86d6ff;
+  --parch:#f2e6c9; --parch-2:#dcc69b; --ink:#fff6e3; --ink-dark:#3a2414; --ink-mut:#c9dde8; --ink-soft:#6e4e30;
+  --leaf:#6dbb4f; --leaf-deep:#2f6b2a; --gold:#f4c34f; --water:#86d6ff; --red:#a8321f;
   --f-display:"Lalezar","Baloo Bhaijaan 2",Tahoma,sans-serif;
   --f-body:"Baloo Bhaijaan 2",Tahoma,"Segoe UI",sans-serif;
   --grain:repeating-linear-gradient(90deg,rgba(0,0,0,.13) 0 2px,transparent 2px 9px,rgba(255,255,255,.05) 9px 10px,transparent 10px 19px);
@@ -23,15 +24,47 @@ body{margin:0;min-height:100vh;font-family:var(--f-body);color:var(--ink);line-h
   background:repeating-linear-gradient(90deg,rgba(255,255,255,.03) 0 3px,transparent 3px 28px),linear-gradient(180deg,var(--sky-700),var(--sky-900));
   background-color:var(--sky-900);
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 32px}
-.wrap{max-width:1100px;margin:0 auto;display:grid;gap:16px}
+button{font:inherit}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.wrap{max-width:1100px;margin:0 auto;display:grid;gap:14px}
 header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:12px 18px;border-radius:10px;
   background:var(--grain),linear-gradient(180deg,var(--wood-300),var(--wood-500) 50%,var(--wood-700));
   box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 0 0 3px var(--wood-900),0 8px 20px rgba(0,0,0,.35)}
 h1{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(28px,5vw,40px);line-height:1.1;text-shadow:0 2px 0 rgba(0,0,0,.4)}
 .meta{display:flex;flex-wrap:wrap;gap:8px;font-weight:800;font-size:15px}
 .chip{background:rgba(0,0,0,.3);border-radius:20px;padding:2px 12px;font-variant-numeric:tabular-nums}
+.tabs{display:flex;flex-wrap:wrap;gap:6px}
+.tab{border:0;border-radius:20px;padding:4px 16px;font-weight:800;font-size:15px;cursor:pointer;color:var(--ink);background:rgba(0,0,0,.3)}
+.tab[aria-pressed="true"]{background:var(--parch);color:var(--ink-dark)}
+
+/* round controls */
+.controls{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;background:rgba(0,0,0,.28)}
+.r-status{display:flex;align-items:center;gap:8px;font-weight:800;font-size:17px;margin-inline-end:auto}
+.dot{width:12px;height:12px;border-radius:50%;background:#9aa7ad;flex:none}
+.dot.running{background:var(--leaf);box-shadow:0 0 0 4px rgba(109,187,79,.3);animation:pulse 1.6s ease-in-out infinite}
+.dot.ended{background:var(--gold)}
+.dot.over{background:#e0453a}
+@keyframes pulse{50%{box-shadow:0 0 0 8px rgba(109,187,79,0)}}
+.btn{border:0;border-radius:8px;padding:8px 16px;font-weight:800;font-size:16px;cursor:pointer;color:#0b2a3b;
+  background:linear-gradient(180deg,#d4f2ff,var(--water) 55%,#4fb2e2);box-shadow:inset 0 -3px 0 rgba(0,0,0,.2),0 2px 0 rgba(0,0,0,.4)}
+.btn.go{color:#0f2d0c;background:linear-gradient(180deg,#c9f0b0,var(--leaf) 55%,#4c9a35)}
+.btn.stop{color:#3a2006;background:linear-gradient(180deg,#ffe9a6,var(--gold) 55%,#d39a2a)}
+.btn.end{color:#fff;background:linear-gradient(180deg,#e9735f,#c0392b 55%,#8e2a1f)}
+.btn.ghost{color:var(--ink-mut);background:transparent;box-shadow:inset 0 0 0 1px rgba(255,255,255,.3)}
+.panel .btn.ghost{color:var(--ink-dark);box-shadow:inset 0 0 0 1px rgba(58,36,20,.4)}
+.btn.arm{outline:3px solid #fff}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn:active:not(:disabled){transform:translateY(2px)}
+.pin{display:flex;flex-wrap:wrap;align-items:center;gap:8px;width:100%;padding-top:8px;border-top:1px solid rgba(255,255,255,.15)}
+.pin label{font-weight:800}
+.pin input{width:120px;height:38px;border-radius:6px;border:2px solid var(--wood-900);background:var(--parch);color:var(--ink-dark);font-size:18px;font-weight:800;text-align:center;letter-spacing:3px}
+.pin .msg{font-size:14px;font-weight:700;color:#ffb4a3}
+
 .status{font-size:14px;color:var(--ink-mut);margin:0}
 .status.err{color:#ffb4a3}
+.notice{margin:0;border-radius:10px;padding:10px 14px;background:rgba(244,195,79,.18);border:1px solid var(--gold);font-weight:600}
+
+/* cards */
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
 .team{border-radius:8px;padding:12px 14px;display:grid;gap:6px;color:var(--ink-dark);
   background:linear-gradient(180deg,var(--parch),var(--parch-2));box-shadow:0 0 0 2px var(--wood-700),0 4px 0 rgba(0,0,0,.25)}
@@ -44,32 +77,60 @@ h1{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(28px,5v
 .bar{display:grid;grid-template-columns:repeat(10,1fr);gap:3px}
 .bar i{height:12px;border-radius:3px;background:rgba(58,36,20,.15)}
 .bar i.on{background:var(--leaf)}
-.team.done .bar i.on{background:#c0392b}
-.t-foot{display:flex;justify-content:space-between;gap:8px;font-size:13px;font-weight:600;color:#6e4e30}
-.tabs{display:flex;gap:6px}
-.tab{border:0;border-radius:20px;padding:4px 16px;font:inherit;font-weight:800;font-size:15px;cursor:pointer;color:var(--ink);background:rgba(0,0,0,.3)}
-.tab[aria-pressed="true"]{background:var(--parch);color:var(--ink-dark)}
-.chart{border-radius:10px;padding:18px 20px 14px;color:var(--ink-dark);
+.team.done .bar i.on{background:var(--red)}
+.t-foot{display:flex;justify-content:space-between;gap:8px;font-size:13px;font-weight:600;color:var(--ink-soft)}
+
+/* parchment panels for charts */
+.panel{border-radius:10px;padding:18px 20px 14px;color:var(--ink-dark);
   background:linear-gradient(180deg,var(--parch),var(--parch-2));box-shadow:0 0 0 2px var(--wood-700),0 4px 0 rgba(0,0,0,.25)}
-.chart h2{margin:0 0 2px;font-family:var(--f-display);font-weight:400;font-size:clamp(24px,4vw,32px);line-height:1.2}
-.chart .sub{margin:0 0 14px;font-size:14px;font-weight:600;color:#6e4e30}
+.panel h2{margin:0 0 2px;font-family:var(--f-display);font-weight:400;font-size:clamp(24px,4vw,34px);line-height:1.2}
+.panel .sub{margin:0 0 14px;font-size:14px;font-weight:600;color:var(--ink-soft)}
+
+/* live bar chart */
 .rows{display:grid;grid-template-columns:minmax(80px,max-content) minmax(0,1fr);column-gap:12px;row-gap:8px;align-items:center}
-.r-name{font-weight:800;font-size:clamp(15px,2vw,19px);text-align:start;overflow-wrap:anywhere;max-width:220px}
+.r-name{font-weight:800;font-size:clamp(15px,2vw,19px);overflow-wrap:anywhere;max-width:220px}
 .r-track{position:relative;height:30px;
   background:repeating-linear-gradient(to left,rgba(58,36,20,.16) 0 1px,transparent 1px 10%);border-inline-start:2px solid rgba(58,36,20,.45)}
-.r-bar{position:absolute;inset-block:3px;inset-inline-start:0;width:0;background:var(--leaf-deep);border-radius:0;
+.r-bar{position:absolute;inset-block:3px;inset-inline-start:0;width:0;background:var(--leaf-deep);
   border-start-end-radius:4px;border-end-end-radius:4px;transition:width .8s cubic-bezier(.2,.8,.2,1)}
 .r-val{position:absolute;top:50%;translate:0 -50%;font-weight:800;font-size:15px;white-space:nowrap;padding-inline:6px;font-variant-numeric:tabular-nums}
-.axis{grid-column:2;position:relative;height:20px;font-size:12px;font-weight:700;color:#6e4e30}
+.axis{grid-column:2;position:relative;height:20px;font-size:12px;font-weight:700;color:var(--ink-soft)}
 .axis span{position:absolute;top:2px;translate:50% 0}
-.axis-title{grid-column:2;text-align:center;font-size:13px;font-weight:700;color:#6e4e30}
+.axis-title{grid-column:2;text-align:center;font-size:13px;font-weight:700;color:var(--ink-soft)}
+
+/* replay */
+.rp-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px;margin-bottom:12px}
+.rp-round{font-family:var(--f-display);font-size:clamp(30px,6vw,52px);line-height:1;color:var(--leaf-deep)}
+.rp-clock{font-weight:800;font-size:15px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+.rp-btns{display:flex;gap:8px}
+.rp-btns .btn{padding:6px 14px;font-size:15px}
+.timeline{position:relative;height:30px;margin:4px 0 18px;display:flex;gap:3px}
+.seg{position:relative;height:100%;border-radius:4px;background:rgba(58,36,20,.14);overflow:hidden;min-width:24px}
+.seg span{position:absolute;inset:0;display:grid;place-items:center;font-size:13px;font-weight:800;color:var(--ink-dark);white-space:nowrap}
+.seg .fill{position:absolute;inset-block:0;inset-inline-start:0;width:0;background:rgba(109,187,79,.55)}
+.race{position:relative;transition:height .4s}
+.race-row{position:absolute;inset-inline:0;top:0;height:40px;display:grid;grid-template-columns:minmax(90px,200px) minmax(0,1fr);gap:12px;align-items:center;transition:transform .6s cubic-bezier(.3,.8,.3,1)}
+.race-name{font-weight:800;font-size:clamp(15px,2.2vw,20px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.race-track{position:relative;height:32px;background:repeating-linear-gradient(to left,rgba(58,36,20,.16) 0 1px,transparent 1px 10%);border-inline-start:2px solid rgba(58,36,20,.45)}
+.race-bar{position:absolute;inset-block:3px;inset-inline-start:0;width:0;border-start-end-radius:4px;border-end-end-radius:4px;background:var(--leaf-deep);transition:width .45s ease-out}
+.race-row.done .race-bar{background:var(--red)}
+.race-val{position:absolute;top:50%;translate:0 -50%;font-weight:800;font-size:16px;padding-inline:6px;white-space:nowrap}
+.medal{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;font-size:13px;font-weight:800;margin-inline-end:6px;vertical-align:middle;color:#3a2006}
+.medal.m1{background:#f4c34f}.medal.m2{background:#cfd6da}.medal.m3{background:#d9a06b}
+.summary{margin-top:18px;overflow-x:auto}
+.summary table{border-collapse:collapse;width:100%;min-width:360px;font-variant-numeric:tabular-nums}
+.summary th,.summary td{padding:6px 10px;text-align:center;border-bottom:1px solid rgba(58,36,20,.2)}
+.summary th{font-size:14px;color:var(--ink-soft)}
+.summary td:first-child,.summary th:first-child{text-align:start;font-weight:800}
+.summary td.up{color:var(--leaf-deep);font-weight:800}
+
 .tip{position:fixed;z-index:20;pointer-events:none;background:rgba(14,10,6,.94);color:var(--ink);border:1px solid var(--gold);border-radius:6px;padding:6px 10px;font-size:14px;line-height:1.4;max-width:240px}
 .tip b{display:block;font-size:15px}
-@media (prefers-reduced-motion:reduce){.r-bar{transition:none}}
 .empty,.setup{border-radius:10px;padding:18px 20px;background:rgba(0,0,0,.25);font-size:16px}
 .setup h2{margin:0 0 8px;font-family:var(--f-display);font-weight:400;font-size:26px}
 .setup ol{margin:0;padding-inline-start:22px;display:grid;gap:6px}
 .setup code{background:rgba(0,0,0,.35);padding:0 6px;border-radius:4px;direction:ltr;display:inline-block}
+@media (prefers-reduced-motion:reduce){.r-bar,.race-bar,.race-row,.dot.running{transition:none;animation:none}}
 </style>
 </head>
 <body>
@@ -77,18 +138,53 @@ h1{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(28px,5v
   <header>
     <h1>لوحة المعلّم</h1>
     <div class="tabs" role="group" aria-label="طريقة العرض">
-      <button class="tab" type="button" id="tabCards" aria-pressed="true">البطاقات</button>
-      <button class="tab" type="button" id="tabChart" aria-pressed="false">مخطط النتائج</button>
+      <button class="tab" type="button" data-view="cards" aria-pressed="true">البطاقات</button>
+      <button class="tab" type="button" data-view="chart" aria-pressed="false">مخطط النتائج</button>
+      <button class="tab" type="button" data-view="replay" aria-pressed="false" id="tabReplay" hidden>النتائج النهائية</button>
     </div>
     <div class="meta"><span class="chip" id="countTeams">الفرق: ٠</span><span class="chip" id="countDone">أنهوا: ٠</span></div>
   </header>
+
+  <div class="controls" id="controls" hidden>
+    <div class="r-status"><span class="dot" id="dot"></span><span id="roundText">لم تبدأ أي جولة</span></div>
+    <button class="btn go" type="button" id="btnStart">ابدأ الجولة ١</button>
+    <button class="btn stop" type="button" id="btnEnd">أنهِ الجولة</button>
+    <button class="btn end" type="button" id="btnOver">أنهِ اللعبة وأظهر النتائج</button>
+    <button class="btn ghost" type="button" id="btnNew">لعبة جديدة</button>
+    <form class="pin" id="pinForm" hidden>
+      <label for="pinInput">رمز المعلّم</label>
+      <input id="pinInput" inputmode="numeric" autocomplete="off">
+      <button class="btn" type="submit">تأكيد</button>
+      <span class="msg" id="pinMsg" aria-live="polite"></span>
+    </form>
+  </div>
+
+  <p class="notice" id="oldScript" hidden>لتفعيل الجولات: انسخ الكود الجديد من الملف google-apps-script.gs إلى Apps Script، ثم Deploy ← Manage deployments ← تعديل ← Version: New version ← Deploy.</p>
   <p class="status" id="status">يتحدّث كل ١٠ ثوانٍ.</p>
-  <div class="grid" id="grid"></div>
-  <section class="chart" id="chart" hidden aria-labelledby="chartTitle">
+
+  <div class="grid" id="viewCards"></div>
+
+  <section class="panel" id="viewChart" hidden aria-labelledby="chartTitle">
     <h2 id="chartTitle">إلى أين وصل كل فريق؟</h2>
     <p class="sub">طول العمود = المرحلة التي وصلت إليها شجرة الفريق (من ١٠).</p>
     <div class="rows" id="rows"></div>
   </section>
+
+  <section class="panel" id="viewReplay" hidden aria-labelledby="rpTitle">
+    <h2 id="rpTitle">نتائج اللعبة</h2>
+    <p class="sub">إعادة لتقدّم الفرق جولةً بعد جولة. طول العمود = المرحلة (من ١٠).</p>
+    <div class="rp-head">
+      <div><div class="rp-round" id="rpRound">الجولة ١</div><div class="rp-clock" id="rpClock"></div></div>
+      <div class="rp-btns">
+        <button class="btn" type="button" id="rpPlay">إيقاف مؤقت</button>
+        <button class="btn ghost" type="button" id="rpRestart">من البداية</button>
+      </div>
+    </div>
+    <div class="timeline" id="timeline" aria-hidden="true"></div>
+    <div class="race" id="race"></div>
+    <div class="summary" id="summary" hidden></div>
+  </section>
+
   <div class="tip" id="tip" hidden></div>
   <div class="empty" id="empty" hidden>لم يبدأ أي فريق بعد. ستظهر الفرق هنا عندما تكتب اسمها في اللعبة.</div>
   <div class="setup" id="setup" hidden>
@@ -104,9 +200,26 @@ h1{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(28px,5v
 <script src="config.js"></script>
 <script>
 const CFG = window.GAME_CONFIG || {};
+const URL_ = CFG.reportUrl || "";
 const TOTAL = (CFG.stations || []).length || 6;
 const toAr = n => String(n).replace(/\d/g, d => "٠١٢٣٤٥٦٧٨٩"[d]);
 const $ = s => document.querySelector(s);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const withAction = a => URL_ + (URL_.includes("?") ? "&" : "?") + "action=" + a;
+
+let game = { status: "idle", round: 0, gameId: "" }, hasRounds = false, view = "cards", lastRows = [];
+
+/* ---------- views ---------- */
+function showView(v) {
+  view = v;
+  document.querySelectorAll(".tab").forEach(t => t.setAttribute("aria-pressed", t.dataset.view === v));
+  $("#viewCards").hidden = v !== "cards";
+  $("#viewChart").hidden = v !== "chart";
+  $("#viewReplay").hidden = v !== "replay";
+  $("#empty").hidden = v === "replay" || lastRows.length > 0;
+  if (v === "replay") startReplay(); else stopReplay();
+}
+document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => showView(t.dataset.view)));
 
 function ago(iso) {
   const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
@@ -116,94 +229,298 @@ function ago(iso) {
   return "قبل " + toAr(Math.floor(s / 3600)) + " س";
 }
 
-function render(rows) {
-  rows.sort((a, b) => (b.done - a.done) || (b.stage - a.stage) || (b.stations - a.stations) || a.updated.localeCompare(b.updated));
-  const grid = $("#grid"); grid.textContent = "";
+function renderCards(rows) {
+  const grid = $("#viewCards"); grid.textContent = "";
   rows.forEach((r, i) => {
-    const card = document.createElement("article");
-    card.className = "team" + (r.done ? " done" : "");
-    const top = document.createElement("div"); top.className = "t-top";
-    const name = document.createElement("span"); name.className = "t-name"; name.textContent = r.team || "بلا اسم";
-    const rank = document.createElement("span"); rank.className = "t-rank"; rank.textContent = "#" + toAr(i + 1);
-    top.append(name, rank);
-    const stage = document.createElement("div"); stage.className = "t-stage";
-    stage.textContent = `المرحلة ${toAr(r.stage)} من ١٠، `;
-    const b = document.createElement("b"); b.textContent = r.done ? "أثمرت الشجرة" : r.stageName; stage.append(b);
-    const bar = document.createElement("div"); bar.className = "bar";
-    for (let k = 0; k < 10; k++) { const s = document.createElement("i"); if (k < r.stage) s.className = "on"; bar.append(s); }
-    const foot = document.createElement("div"); foot.className = "t-foot";
-    const st = document.createElement("span"); st.textContent = `المحطات: ${toAr(r.stations)} من ${toAr(TOTAL)}`;
-    const up = document.createElement("span"); up.textContent = ago(r.updated);
-    foot.append(st, up);
+    const card = el("article", "team" + (r.done ? " done" : ""));
+    const top = el("div", "t-top");
+    top.append(el("span", "t-name", r.team || "بلا اسم"), el("span", "t-rank", "#" + toAr(i + 1)));
+    const stage = el("div", "t-stage", `المرحلة ${toAr(r.stage)} من ١٠، `);
+    stage.append(el("b", null, r.done ? "أثمرت الشجرة" : r.stageName));
+    const bar = el("div", "bar");
+    for (let k = 0; k < 10; k++) bar.append(el("i", k < r.stage ? "on" : null));
+    const foot = el("div", "t-foot");
+    foot.append(el("span", null, `المحطات: ${toAr(r.stations)} من ${toAr(TOTAL)}`), el("span", null, ago(r.updated)));
     card.append(top, stage, bar, foot);
     grid.append(card);
   });
-  $("#countTeams").textContent = "الفرق: " + toAr(rows.length);
-  $("#countDone").textContent = "أنهوا: " + toAr(rows.filter(r => r.done).length);
-  $("#empty").hidden = rows.length > 0;
-  renderChart(rows);
 }
 
-/* ---------- results chart: one bar per team, length = stage out of 10 ---------- */
+/* ---------- live chart ---------- */
 const rowsEl = $("#rows"), tip = $("#tip"), lastPct = {};
+function showTip(e, r) {
+  tip.textContent = "";
+  tip.append(el("b", null, r.team || "بلا اسم"), `المرحلة ${toAr(r.stage)} من ١٠: ${r.done ? "أثمرت الشجرة" : r.stageName}`, el("br"), `المحطات: ${toAr(r.stations)} من ${toAr(TOTAL)}`);
+  tip.hidden = false;
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  tip.style.left = Math.max(8, Math.min(innerWidth - w - 8, e.clientX - w / 2)) + "px";
+  tip.style.top = Math.max(8, e.clientY - h - 14) + "px";
+}
+function placeVal(val, pct, dark) {
+  const inside = pct >= 78;
+  val.style.insetInlineStart = inside ? "auto" : `calc(${pct}% + 2px)`;
+  val.style.insetInlineEnd = inside ? `calc(${100 - pct}% + 2px)` : "auto";
+  val.style.color = inside ? "#fff6e3" : dark;
+}
+function axisRow(container) {
+  const axis = el("div", "axis");
+  for (let k = 0; k <= 10; k += 2) { const t = el("span", null, toAr(k)); t.style.insetInlineStart = k * 10 + "%"; axis.append(t); }
+  container.append(el("span"), axis, el("span"), el("div", "axis-title", "المرحلة"));
+}
 function renderChart(rows) {
   rowsEl.textContent = "";
   rows.forEach(r => {
-    const name = document.createElement("div"); name.className = "r-name"; name.textContent = r.team || "بلا اسم";
-    const track = document.createElement("div"); track.className = "r-track";
-    const bar = document.createElement("div"); bar.className = "r-bar";
-    const val = document.createElement("span"); val.className = "r-val";
+    const track = el("div", "r-track"), bar = el("div", "r-bar");
     const pct = Math.max(0, Math.min(10, r.stage)) * 10;
-    val.textContent = toAr(r.stage) + (r.done ? "، أثمرت" : "");
-    val.style.insetInlineStart = pct >= 78 ? "auto" : `calc(${pct}% + 2px)`;
-    val.style.insetInlineEnd = pct >= 78 ? `calc(${100 - pct}% + 2px)` : "auto";
-    val.style.color = pct >= 78 ? "#fff6e3" : "var(--ink-dark)";
+    const val = el("span", "r-val", toAr(r.stage) + (r.done ? "، أثمرت" : ""));
+    placeVal(val, pct, "var(--ink-dark)");
     track.append(bar, val);
-    track.addEventListener("pointermove", e => {
-      tip.innerHTML = "";
-      const b = document.createElement("b"); b.textContent = r.team || "بلا اسم";
-      tip.append(b, `المرحلة ${toAr(r.stage)} من ١٠: ${r.done ? "أثمرت الشجرة" : r.stageName}`, document.createElement("br"), `المحطات: ${toAr(r.stations)} من ${toAr(TOTAL)}`);
-      tip.hidden = false;
-      const w = tip.offsetWidth, h = tip.offsetHeight;
-      tip.style.left = Math.max(8, Math.min(innerWidth - w - 8, e.clientX - w / 2)) + "px";
-      tip.style.top = Math.max(8, e.clientY - h - 14) + "px";
-    });
+    track.addEventListener("pointermove", e => showTip(e, r));
     track.addEventListener("pointerleave", () => { tip.hidden = true; });
-    rowsEl.append(name, track);
+    rowsEl.append(el("div", "r-name", r.team || "بلا اسم"), track);
     bar.style.width = (lastPct[r.id] || 0) + "%";
     lastPct[r.id] = pct;
     requestAnimationFrame(() => requestAnimationFrame(() => { bar.style.width = pct + "%"; }));
   });
-  if (rows.length) {
-    const axis = document.createElement("div"); axis.className = "axis";
-    for (let k = 0; k <= 10; k += 2) { const t = document.createElement("span"); t.textContent = toAr(k); t.style.insetInlineStart = k * 10 + "%"; axis.append(t); }
-    const at = document.createElement("div"); at.className = "axis-title"; at.textContent = "المرحلة";
-    rowsEl.append(document.createElement("span"), axis, document.createElement("span"), at);
-  }
+  if (rows.length) axisRow(rowsEl);
 }
-function showView(chart) {
-  $("#tabCards").setAttribute("aria-pressed", !chart);
-  $("#tabChart").setAttribute("aria-pressed", chart);
-  $("#grid").hidden = chart;
-  $("#chart").hidden = !chart;
-}
-$("#tabCards").addEventListener("click", () => showView(false));
-$("#tabChart").addEventListener("click", () => showView(true));
 
+/* ---------- round controls ---------- */
+const STATUS_TEXT = {
+  idle: () => "لم تبدأ أي جولة بعد",
+  running: n => `الجولة ${toAr(n)} جارية، الفرق تسقي الآن`,
+  ended: n => `انتهت الجولة ${toAr(n)}، السقي متوقّف`,
+  over: n => `انتهت اللعبة بعد ${toAr(n)} ${n === 1 ? "جولة" : "جولات"}`
+};
+function renderControls() {
+  $("#controls").hidden = !URL_ || !hasRounds;
+  $("#oldScript").hidden = !URL_ || hasRounds;
+  const s = game.status, n = game.round;
+  $("#dot").className = "dot " + s;
+  $("#roundText").textContent = (STATUS_TEXT[s] || STATUS_TEXT.idle)(n);
+  $("#btnStart").textContent = "ابدأ الجولة " + toAr(n + 1);
+  $("#btnStart").hidden = s === "running" || s === "over";
+  $("#btnEnd").hidden = s !== "running";
+  $("#btnOver").hidden = s === "over" || n === 0;
+  $("#tabReplay").hidden = s !== "over";
+}
+
+let PIN = "";
+try { PIN = localStorage.getItem("bustan-pin") || ""; } catch (e) {}
+let pendingAction = null;
+async function control(action) {
+  if (!PIN) { pendingAction = action; $("#pinForm").hidden = false; $("#pinInput").focus(); return; }
+  document.querySelectorAll(".controls .btn").forEach(b => b.disabled = true);
+  try {
+    const res = await fetch(URL_, { method: "POST", body: JSON.stringify({ type: "control", action, pin: PIN }) });
+    const j = await res.json();
+    if (j.error === "bad_pin") {
+      PIN = ""; try { localStorage.removeItem("bustan-pin"); } catch (e) {}
+      pendingAction = action; $("#pinForm").hidden = false; $("#pinMsg").textContent = "الرمز غير صحيح، حاول مرة أخرى."; $("#pinInput").focus();
+    } else if (j.state) {
+      $("#pinForm").hidden = true; $("#pinMsg").textContent = "";
+    }
+  } catch (e) {
+    $("#status").className = "status err";
+    $("#status").textContent = "لم يصل الأمر إلى الجدول. تحقّق من الاتصال وحاول مرة أخرى.";
+  }
+  document.querySelectorAll(".controls .btn").forEach(b => b.disabled = false);
+  await load();
+  if (action === "over" && game.status === "over" && view !== "replay") showView("replay");
+}
+$("#pinForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const v = $("#pinInput").value.trim();
+  if (!v) return;
+  PIN = v; try { localStorage.setItem("bustan-pin", v); } catch (e) {}
+  $("#pinInput").value = "";
+  const a = pendingAction; pendingAction = null;
+  if (a) control(a);
+});
+// two taps for the actions that cannot be undone
+function twoTap(btn, label, confirmLabel, action) {
+  let t = 0;
+  btn.addEventListener("click", () => {
+    if (!btn.classList.contains("arm")) {
+      btn.classList.add("arm"); btn.textContent = confirmLabel;
+      t = setTimeout(() => { btn.classList.remove("arm"); btn.textContent = label; }, 3500);
+      return;
+    }
+    clearTimeout(t); btn.classList.remove("arm"); btn.textContent = label;
+    control(action);
+  });
+}
+$("#btnStart").addEventListener("click", () => control("start"));
+$("#btnEnd").addEventListener("click", () => control("end"));
+twoTap($("#btnOver"), "أنهِ اللعبة وأظهر النتائج", "اضغط مرة أخرى لإنهاء اللعبة", "over");
+twoTap($("#btnNew"), "لعبة جديدة", "اضغط مرة أخرى لمسح كل شيء", "new");
+
+/* ---------- replay: the whole game, round by round ---------- */
+let rp = null, rpRaf = 0, rpPlaying = false;
+const ROW_H = 46;
+
+function buildReplay(h) {
+  const now = Date.now();
+  const rounds = (h.rounds || []).filter(r => r.start).map(r => {
+    const s = new Date(r.start).getTime(), e = r.end ? new Date(r.end).getTime() : now;
+    return { n: r.round, s, e: Math.max(e, s + 1000) };
+  });
+  if (!rounds.length) return null;
+  let v = 0;
+  rounds.forEach(r => { r.v0 = v; v += r.e - r.s; r.v1 = v; });
+  const total = v;
+  // map a real time onto the replay timeline, skipping the pauses between rounds
+  const vOf = t => {
+    if (t <= rounds[0].s) return 0;
+    for (const r of rounds) if (t <= r.e) return t >= r.s ? r.v0 + (t - r.s) : r.v0;
+    return total;
+  };
+  const teams = {};
+  (h.log || []).forEach(x => {
+    const tm = teams[x.id] || (teams[x.id] = { id: x.id, team: "", ev: [] });
+    tm.team = x.team || tm.team;
+    tm.ev.push({ v: vOf(new Date(x.t).getTime()), stage: x.stage, done: x.done });
+  });
+  const list = Object.values(teams);
+  list.forEach(tm => tm.ev.sort((a, b) => a.v - b.v));
+  const at = (tm, p) => { let s = 0, d = false; for (const e of tm.ev) { if (e.v > p) break; s = Math.max(s, e.stage); d = d || e.done; } return { s, d }; };
+  return { rounds, total, teams: list, at, duration: Math.min(36000, 9000 + rounds.length * 7000), p: 0 };
+}
+
+function drawTimeline() {
+  const tl = $("#timeline"); tl.textContent = "";
+  rp.rounds.forEach(r => {
+    const seg = el("div", "seg"); seg.style.flex = String(Math.max(r.v1 - r.v0, rp.total * .06));
+    const fill = el("div", "fill"); r.fillEl = fill;
+    seg.append(fill, el("span", null, "الجولة " + toAr(r.n)));
+    tl.append(seg);
+  });
+}
+
+function drawRace() {
+  const race = $("#race"); race.textContent = "";
+  race.style.height = rp.teams.length * ROW_H + "px";
+  rp.teams.forEach(tm => {
+    const row = el("div", "race-row"), name = el("div", "race-name"), track = el("div", "race-track"),
+          bar = el("div", "race-bar"), val = el("span", "race-val");
+    name.append(el("span", null, tm.team || "بلا اسم"));
+    track.append(bar, val);
+    row.append(name, track);
+    race.append(row);
+    Object.assign(tm, { row, nameEl: name, bar, val, shown: -1, doneShown: null, rank: -1 });
+  });
+}
+
+function frame(p) {
+  const cur = rp.rounds.find(r => p <= r.v1) || rp.rounds[rp.rounds.length - 1];
+  $("#rpRound").textContent = "الجولة " + toAr(cur.n);
+  const secs = Math.max(0, Math.round((Math.min(p, cur.v1) - cur.v0) / 1000));
+  $("#rpClock").textContent = `الوقت في الجولة: \u2066${toAr(Math.floor(secs / 60))}:${toAr(String(secs % 60).padStart(2, "0"))}\u2069`;
+  rp.rounds.forEach(r => { r.fillEl.style.width = Math.max(0, Math.min(1, (p - r.v0) / (r.v1 - r.v0))) * 100 + "%"; });
+  const vals = rp.teams.map(tm => ({ tm, ...rp.at(tm, p) }));
+  vals.sort((a, b) => (b.s - a.s) || (b.d - a.d) || a.tm.team.localeCompare(b.tm.team, "ar"));
+  vals.forEach((x, i) => {
+    const tm = x.tm;
+    if (tm.rank !== i) { tm.row.style.transform = `translateY(${i * ROW_H}px)`; tm.rank = i; }
+    if (tm.shown !== x.s || tm.doneShown !== x.d) {
+      tm.shown = x.s; tm.doneShown = x.d;
+      const pct = x.s * 10;
+      tm.bar.style.width = pct + "%";
+      tm.val.textContent = x.s ? toAr(x.s) + (x.d ? "، أثمرت" : "") : "";
+      placeVal(tm.val, pct, "var(--ink-dark)");
+      tm.row.classList.toggle("done", x.d);
+    }
+  });
+}
+
+function clearMedals() { rp.teams.forEach(tm => { const m = tm.nameEl.querySelector(".medal"); if (m) m.remove(); }); }
+function medals() {
+  clearMedals();
+  [...rp.teams].sort((a, b) => a.rank - b.rank).forEach((tm, i) => {
+    if (i < 3 && tm.shown > 0) tm.nameEl.prepend(el("span", "medal m" + (i + 1), toAr(i + 1)));
+  });
+}
+
+function drawSummary() {
+  const box = $("#summary"); box.textContent = "";
+  const table = el("table"), head = el("tr");
+  head.append(el("th", null, "الفريق"));
+  rp.rounds.forEach(r => head.append(el("th", null, "بعد الجولة " + toAr(r.n))));
+  table.append(head);
+  [...rp.teams].sort((a, b) => a.rank - b.rank).forEach(tm => {
+    const tr = el("tr"); tr.append(el("td", null, tm.team || "بلا اسم"));
+    let prev = 0;
+    rp.rounds.forEach(r => {
+      const s = rp.at(tm, r.v1).s;
+      tr.append(el("td", s > prev ? "up" : null, s ? toAr(s) + (s > prev && prev ? ` (+${toAr(s - prev)})` : "") : "–"));
+      prev = Math.max(prev, s);
+    });
+    table.append(tr);
+  });
+  box.append(el("p", "sub", "المرحلة التي وصل إليها كل فريق في نهاية كل جولة، وبين القوسين ما زاده في تلك الجولة."), table);
+  box.hidden = false;
+}
+
+function playFrom(startP) {
+  cancelAnimationFrame(rpRaf);
+  rpPlaying = true; $("#rpPlay").textContent = "إيقاف مؤقت";
+  $("#summary").hidden = true;
+  clearMedals();
+  const t0 = performance.now() - (startP / rp.total) * rp.duration;
+  const step = now => {
+    if (!rpPlaying) return;
+    const p = Math.min(rp.total, ((now - t0) / rp.duration) * rp.total);
+    rp.p = p; frame(p);
+    if (p < rp.total) rpRaf = requestAnimationFrame(step);
+    else { rpPlaying = false; $("#rpPlay").textContent = "تشغيل"; medals(); drawSummary(); }
+  };
+  rpRaf = requestAnimationFrame(step);
+}
+$("#rpPlay").addEventListener("click", () => {
+  if (!rp) return;
+  if (rpPlaying) { rpPlaying = false; cancelAnimationFrame(rpRaf); $("#rpPlay").textContent = "تشغيل"; }
+  else playFrom(rp.p >= rp.total ? 0 : rp.p);
+});
+$("#rpRestart").addEventListener("click", () => { if (rp) playFrom(0); });
+
+async function startReplay() {
+  stopReplay();
+  $("#summary").hidden = true; $("#timeline").textContent = "";
+  $("#race").style.height = ""; $("#race").textContent = "جارٍ تحميل النتائج…";
+  try { rp = buildReplay(await (await fetch(withAction("history"), { cache: "no-store" })).json()); }
+  catch (e) { rp = null; }
+  if (view !== "replay") return;
+  if (!rp || !rp.teams.length) { $("#race").textContent = "لا توجد جولات مسجّلة بعد."; return; }
+  drawTimeline(); drawRace(); frame(0);
+  setTimeout(() => { if (view === "replay") playFrom(0); }, 600);
+}
+function stopReplay() { rpPlaying = false; cancelAnimationFrame(rpRaf); }
+
+/* ---------- data ---------- */
+let seenOver = false;
 async function load() {
   try {
-    const res = await fetch(CFG.reportUrl, { cache: "no-store" });
-    const rows = await res.json();
-    render(Array.isArray(rows) ? rows : []);
+    const data = await (await fetch(URL_, { cache: "no-store" })).json();
+    let rows;
+    if (Array.isArray(data)) { rows = data; hasRounds = false; }            // older script without rounds
+    else { rows = data.rows || []; game = data.state || game; hasRounds = true; }
+    rows.sort((a, b) => (b.done - a.done) || (b.stage - a.stage) || (b.stations - a.stations) || String(a.updated).localeCompare(String(b.updated)));
+    lastRows = rows;
+    renderCards(rows); renderChart(rows); renderControls();
+    $("#countTeams").textContent = "الفرق: " + toAr(rows.length);
+    $("#countDone").textContent = "أنهوا: " + toAr(rows.filter(r => r.done).length);
+    $("#empty").hidden = view === "replay" || rows.length > 0;
     $("#status").className = "status";
     $("#status").textContent = "آخر تحديث: " + new Date().toLocaleTimeString("ar") + "، يتحدّث كل ١٠ ثوانٍ.";
+    if (game.status === "over" && !seenOver) { seenOver = true; if (view !== "replay") showView("replay"); }
+    if (game.status !== "over") { seenOver = false; if (view === "replay") showView("cards"); }
   } catch (e) {
     $("#status").className = "status err";
     $("#status").textContent = "تعذّر جلب التقدّم. تأكّد من رابط reportUrl ومن أن النشر متاح لـ Anyone.";
   }
 }
 
-if (!CFG.reportUrl) {
+if (!URL_) {
   $("#setup").hidden = false;
   $("#status").hidden = true;
 } else {

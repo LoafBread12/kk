@@ -132,6 +132,12 @@ button,input{font:inherit;color:inherit}
 .toast strong{display:block;font-family:var(--f-display);font-weight:400;font-size:21px;line-height:1.25}
 
 .g-team{margin:0;font-weight:800;font-size:15px;color:#dff4ff;background:rgba(0,0,0,.3);border-radius:20px;padding:0 12px}
+.pause{position:absolute;inset:0;z-index:7;display:grid;place-items:center;padding:16px;background:rgba(8,24,36,.45);pointer-events:none}
+.pause-card{width:min(100%,400px);display:grid;gap:6px;padding:16px 20px;border-radius:10px;text-align:center;
+  background:rgba(14,10,6,.9);border:2px solid var(--gold);box-shadow:0 16px 40px rgba(0,0,0,.5)}
+.pause-card h2{margin:0;font-family:var(--f-display);font-weight:400;font-size:30px;line-height:1.2;color:var(--gold)}
+.pause-card p{margin:0;font-size:16px;font-weight:600}
+.g-round{margin:0;font-weight:800;font-size:13px;color:#0f2d0c;background:var(--leaf);border-radius:20px;padding:0 12px}
 .join{position:absolute;inset:0;z-index:8;display:grid;place-items:center;padding:16px;background:rgba(8,24,36,.55);backdrop-filter:blur(2px)}
 .join-card{width:min(100%,380px);display:grid;gap:10px;padding:18px 20px 16px;border-radius:10px;text-align:center;
   background:var(--grain),linear-gradient(180deg,var(--wood-300),var(--wood-500) 45%,var(--wood-700));
@@ -267,6 +273,7 @@ button,input{font:inherit;color:inherit}
       <header class="plaque">
         <h1 class="g-title">بستان البذرة</h1>
         <p class="g-team" id="teamLabel" hidden></p>
+        <p class="g-round" id="roundLabel" hidden></p>
         <p class="g-stage"><span id="stageNum">المرحلة ١ من ١٠</span>، <b id="stageName">بذرة</b></p>
         <ol class="track" id="track"></ol>
         <div class="next" title="النمو حتى المرحلة التالية"><span id="nextBar"></span></div>
@@ -289,6 +296,10 @@ button,input{font:inherit;color:inherit}
         <p class="join-msg" id="joinMsg" aria-live="polite"></p>
       </div>
     </form>
+
+    <div class="pause" id="pause" hidden>
+      <div class="pause-card" role="status" aria-live="polite"><h2 id="pauseTitle"></h2><p id="pauseText"></p></div>
+    </div>
 
     <div class="gauge" id="gauge">
       <div class="g-ico"><svg viewBox="0 0 120 96" aria-hidden="true"><path d="M50 66L13 39L18 32L54 56Z" fill="#2b8db0"/><path d="M44 34L100 34L96 86Q72 93 48 86Z" fill="#3fa9cf"/><path d="M98 42C124 42 122 80 96 76" fill="none" stroke="#1f6f8c" stroke-width="7"/><path d="M60 12q-6 10 0 14q6-4 0-14z" fill="#86d6ff"/></svg></div>
@@ -370,11 +381,12 @@ const RATE = WPS / CONFIG.pourSeconds;               // growth per second of aim
 
 /* ---------- state ---------- */
 const KEY = "bustan-albithra-v1";
-let state = { unlocked: [], water: 0, progress: 0, team: "" };
+let state = { unlocked: [], water: 0, progress: 0, team: "", gameId: "" };
 try {
   const s = JSON.parse(localStorage.getItem(KEY));
   if (s && Array.isArray(s.unlocked)) {
     state.team = typeof s.team === "string" ? s.team.slice(0, 30) : "";
+    state.gameId = typeof s.gameId === "string" ? s.gameId : "";
     state.unlocked = s.unlocked.filter(id => CONFIG.stations.some(x => x.id === id));
     state.water = Math.max(0, +s.water || 0);
     state.progress = Math.min(MAX, Math.max(0, +s.progress || 0));
@@ -638,6 +650,7 @@ function updateHUD(pouring, aimed) {
   $("#waterTxt").textContent = w <= 0 ? "فارغ" : toAr(Math.max(1, Math.round(Math.min(1, w / WPS) * 100))) + "٪" + (extra > 0 ? ` + ${toAr(extra)} إبريق` : "");
   let h;
   if (complete) h = "أثمرت الشجرة! أحسنتم يا أبطال";
+  else if (!canWater()) h = "السقي متوقّف الآن، انتظروا المعلّم";
   else if (w > 0 && pouring) h = aimed ? "رائع! استمرّ في السقي…" : "وجّه الإبريق فوق التربة";
   else if (w > 0) h = "اضغط مطوّلًا واسحب الإبريق فوق التربة لتسقي البذرة";
   else if (state.unlocked.length === 0) h = "اختر محطة من لوحة المحطات واكتب كلمة السر لتحصل على الماء";
@@ -685,6 +698,7 @@ function needWater() {
 board.addEventListener("animationend", e => { if (e.animationName === "nudge") board.classList.remove("nudge"); });
 garden.addEventListener("pointerdown", e => {
   if (e.button > 0 || complete || !joinEl.hidden) return;
+  if (!canWater()) { pausedToast(); return; }
   if (state.water <= 0) { needWater(); return; }
   dragging = true; setPtr(e);
   garden.setPointerCapture(e.pointerId);
@@ -699,6 +713,7 @@ canEl.addEventListener("keydown", e => {
   if (e.key !== " " && e.key !== "Enter") return;
   e.preventDefault();
   if (e.repeat) return;
+  if (!canWater()) { pausedToast(); return; }
   if (state.water <= 0 && !complete) { needWater(); return; }
   keyPour = true;
 });
@@ -738,7 +753,7 @@ let last = performance.now();
 function tick(now) {
   const dt = Math.min(.05, (now - last) / 1000); last = now;
 
-  const pourIntent = (dragging || keyPour) && !complete;
+  const pourIntent = (dragging || keyPour) && !complete && canWater();
   let tx, ty;
   if (dragging) { tx = ptr.x + 54; ty = ptr.y - 46; }
   else if (keyPour) { tx = soil.cx - (soil.r - soil.l) * .12 + 58; ty = soil.cy - 110; }
@@ -842,7 +857,7 @@ resetBtn.addEventListener("click", () => {
   }
   clearTimeout(resetTimer);
   resetBtn.classList.remove("arm"); resetBtn.textContent = "بدء من جديد";
-  state = { unlocked: [], water: 0, progress: 0, team: "" };
+  state = { unlocked: [], water: 0, progress: 0, team: "", gameId: state.gameId };
   complete = false; parts = []; wet = 0;
   save(true);
   if (openId) toggleStation(openId);
@@ -873,11 +888,62 @@ joinEl.addEventListener("submit", e => {
   state.team = name; teamInput.value = ""; $("#joinMsg").textContent = "";
   save(true); showTeam(); report();
 });
+/* ---------- rounds: the teacher starts and ends them; watering only while one is running ---------- */
+// "unknown" until the first answer, so a slow or unreachable sheet never locks the game
+const round = { status: CONFIG.reportUrl ? "unknown" : "running", n: 0 };
+const canWater = () => round.status === "running" || round.status === "unknown";
+let lastPausedToast = 0;
+function pausedToast() {
+  const now = performance.now();
+  if (now - lastPausedToast < 2500) return;
+  lastPausedToast = now;
+  toast("السقي متوقّف", round.status === "over" ? "انتهت اللعبة" : "انتظروا بدء الجولة");
+}
+function renderRound() {
+  const p = $("#pause"), label = $("#roundLabel");
+  label.hidden = !(round.status === "running" && round.n > 0);
+  label.textContent = "الجولة " + toAr(round.n);
+  const msg = {
+    idle:  ["استعدّوا!", "انتظروا حتى يبدأ المعلّم الجولة."],
+    ended: ["انتهت الجولة " + toAr(round.n), "توقّف السقي. انتظروا الجولة التالية."],
+    over:  ["انتهت اللعبة", "أحسنتم! انظروا إلى النتائج مع المعلّم."]
+  }[round.status];
+  p.hidden = !msg || complete;
+  if (msg) { $("#pauseTitle").textContent = msg[0]; $("#pauseText").textContent = msg[1]; }
+  if (!canWater()) { dragging = false; keyPour = false; garden.classList.remove("pouring"); }
+}
+async function pollRound() {
+  if (!CONFIG.reportUrl) return;
+  let s;
+  try {
+    const res = await fetch(CONFIG.reportUrl + (CONFIG.reportUrl.includes("?") ? "&" : "?") + "action=state", { cache: "no-store" });
+    s = await res.json();
+  } catch (e) { return; }
+  if (!s || Array.isArray(s) || !s.status) { round.status = "running"; renderRound(); return; }  // older script without rounds
+  if (s.gameId && state.gameId && s.gameId !== state.gameId) {
+    // the teacher started a new game: start this device over
+    state = { unlocked: [], water: 0, progress: 0, team: "", gameId: s.gameId };
+    complete = false; parts = []; wet = 0;
+    save(true);
+    if (openId) toggleStation(openId);
+    renderStations(); setStage(0, false); showTeam();
+    toast("لعبة جديدة", "اكتبوا اسم الفريق");
+  } else if (s.gameId && !state.gameId) {
+    state.gameId = s.gameId; save(true);
+  }
+  const was = round.status;
+  round.status = s.status; round.n = Number(s.round) || 0;
+  renderRound();
+  if (was !== "unknown" && was !== round.status) {
+    if (round.status === "running") toast("بدأت الجولة " + toAr(round.n), "هيا اسقوا البذرة!");
+  }
+}
+
 function report() {
   if (!CONFIG.reportUrl || !state.team) return;
   const st = stageOf(state.progress);
   const body = JSON.stringify({
-    id: deviceId, team: state.team, stage: st + 1, stageName: STAGES[st].name,
+    id: deviceId, gameId: state.gameId, team: state.team, stage: st + 1, stageName: STAGES[st].name,
     stations: state.unlocked.length, totalStations: CONFIG.stations.length, done: state.progress >= MAX
   });
   try {
@@ -888,6 +954,8 @@ function report() {
 /* ---------- start ---------- */
 fitScene(); measure();
 showTeam();
+pollRound();
+setInterval(pollRound, 5000);
 report();
 renderStations();
 setStage(stageOf(state.progress), false);
