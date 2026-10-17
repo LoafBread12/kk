@@ -46,6 +46,26 @@ h1{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(28px,5v
 .bar i.on{background:var(--leaf)}
 .team.done .bar i.on{background:#c0392b}
 .t-foot{display:flex;justify-content:space-between;gap:8px;font-size:13px;font-weight:600;color:#6e4e30}
+.tabs{display:flex;gap:6px}
+.tab{border:0;border-radius:20px;padding:4px 16px;font:inherit;font-weight:800;font-size:15px;cursor:pointer;color:var(--ink);background:rgba(0,0,0,.3)}
+.tab[aria-pressed="true"]{background:var(--parch);color:var(--ink-dark)}
+.chart{border-radius:10px;padding:18px 20px 14px;color:var(--ink-dark);
+  background:linear-gradient(180deg,var(--parch),var(--parch-2));box-shadow:0 0 0 2px var(--wood-700),0 4px 0 rgba(0,0,0,.25)}
+.chart h2{margin:0 0 2px;font-family:var(--f-display);font-weight:400;font-size:clamp(24px,4vw,32px);line-height:1.2}
+.chart .sub{margin:0 0 14px;font-size:14px;font-weight:600;color:#6e4e30}
+.rows{display:grid;grid-template-columns:minmax(80px,max-content) minmax(0,1fr);column-gap:12px;row-gap:8px;align-items:center}
+.r-name{font-weight:800;font-size:clamp(15px,2vw,19px);text-align:start;overflow-wrap:anywhere;max-width:220px}
+.r-track{position:relative;height:30px;
+  background:repeating-linear-gradient(to left,rgba(58,36,20,.16) 0 1px,transparent 1px 10%);border-inline-start:2px solid rgba(58,36,20,.45)}
+.r-bar{position:absolute;inset-block:3px;inset-inline-start:0;width:0;background:var(--leaf-deep);border-radius:0;
+  border-start-end-radius:4px;border-end-end-radius:4px;transition:width .8s cubic-bezier(.2,.8,.2,1)}
+.r-val{position:absolute;top:50%;translate:0 -50%;font-weight:800;font-size:15px;white-space:nowrap;padding-inline:6px;font-variant-numeric:tabular-nums}
+.axis{grid-column:2;position:relative;height:20px;font-size:12px;font-weight:700;color:#6e4e30}
+.axis span{position:absolute;top:2px;translate:50% 0}
+.axis-title{grid-column:2;text-align:center;font-size:13px;font-weight:700;color:#6e4e30}
+.tip{position:fixed;z-index:20;pointer-events:none;background:rgba(14,10,6,.94);color:var(--ink);border:1px solid var(--gold);border-radius:6px;padding:6px 10px;font-size:14px;line-height:1.4;max-width:240px}
+.tip b{display:block;font-size:15px}
+@media (prefers-reduced-motion:reduce){.r-bar{transition:none}}
 .empty,.setup{border-radius:10px;padding:18px 20px;background:rgba(0,0,0,.25);font-size:16px}
 .setup h2{margin:0 0 8px;font-family:var(--f-display);font-weight:400;font-size:26px}
 .setup ol{margin:0;padding-inline-start:22px;display:grid;gap:6px}
@@ -56,10 +76,20 @@ h1{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(28px,5v
 <div class="wrap">
   <header>
     <h1>لوحة المعلّم</h1>
+    <div class="tabs" role="group" aria-label="طريقة العرض">
+      <button class="tab" type="button" id="tabCards" aria-pressed="true">البطاقات</button>
+      <button class="tab" type="button" id="tabChart" aria-pressed="false">مخطط النتائج</button>
+    </div>
     <div class="meta"><span class="chip" id="countTeams">الفرق: ٠</span><span class="chip" id="countDone">أنهوا: ٠</span></div>
   </header>
   <p class="status" id="status">يتحدّث كل ١٠ ثوانٍ.</p>
   <div class="grid" id="grid"></div>
+  <section class="chart" id="chart" hidden aria-labelledby="chartTitle">
+    <h2 id="chartTitle">إلى أين وصل كل فريق؟</h2>
+    <p class="sub">طول العمود = المرحلة التي وصلت إليها شجرة الفريق (من ١٠).</p>
+    <div class="rows" id="rows"></div>
+  </section>
+  <div class="tip" id="tip" hidden></div>
   <div class="empty" id="empty" hidden>لم يبدأ أي فريق بعد. ستظهر الفرق هنا عندما تكتب اسمها في اللعبة.</div>
   <div class="setup" id="setup" hidden>
     <h2>لم يُربط جدول التقدّم بعد</h2>
@@ -97,7 +127,7 @@ function render(rows) {
     const rank = document.createElement("span"); rank.className = "t-rank"; rank.textContent = "#" + toAr(i + 1);
     top.append(name, rank);
     const stage = document.createElement("div"); stage.className = "t-stage";
-    stage.textContent = `المرحلة ${toAr(r.stage)} من ١٠ · `;
+    stage.textContent = `المرحلة ${toAr(r.stage)} من ١٠، `;
     const b = document.createElement("b"); b.textContent = r.done ? "أثمرت الشجرة" : r.stageName; stage.append(b);
     const bar = document.createElement("div"); bar.className = "bar";
     for (let k = 0; k < 10; k++) { const s = document.createElement("i"); if (k < r.stage) s.className = "on"; bar.append(s); }
@@ -111,7 +141,54 @@ function render(rows) {
   $("#countTeams").textContent = "الفرق: " + toAr(rows.length);
   $("#countDone").textContent = "أنهوا: " + toAr(rows.filter(r => r.done).length);
   $("#empty").hidden = rows.length > 0;
+  renderChart(rows);
 }
+
+/* ---------- results chart: one bar per team, length = stage out of 10 ---------- */
+const rowsEl = $("#rows"), tip = $("#tip"), lastPct = {};
+function renderChart(rows) {
+  rowsEl.textContent = "";
+  rows.forEach(r => {
+    const name = document.createElement("div"); name.className = "r-name"; name.textContent = r.team || "بلا اسم";
+    const track = document.createElement("div"); track.className = "r-track";
+    const bar = document.createElement("div"); bar.className = "r-bar";
+    const val = document.createElement("span"); val.className = "r-val";
+    const pct = Math.max(0, Math.min(10, r.stage)) * 10;
+    val.textContent = toAr(r.stage) + (r.done ? "، أثمرت" : "");
+    val.style.insetInlineStart = pct >= 78 ? "auto" : `calc(${pct}% + 2px)`;
+    val.style.insetInlineEnd = pct >= 78 ? `calc(${100 - pct}% + 2px)` : "auto";
+    val.style.color = pct >= 78 ? "#fff6e3" : "var(--ink-dark)";
+    track.append(bar, val);
+    track.addEventListener("pointermove", e => {
+      tip.innerHTML = "";
+      const b = document.createElement("b"); b.textContent = r.team || "بلا اسم";
+      tip.append(b, `المرحلة ${toAr(r.stage)} من ١٠: ${r.done ? "أثمرت الشجرة" : r.stageName}`, document.createElement("br"), `المحطات: ${toAr(r.stations)} من ${toAr(TOTAL)}`);
+      tip.hidden = false;
+      const w = tip.offsetWidth, h = tip.offsetHeight;
+      tip.style.left = Math.max(8, Math.min(innerWidth - w - 8, e.clientX - w / 2)) + "px";
+      tip.style.top = Math.max(8, e.clientY - h - 14) + "px";
+    });
+    track.addEventListener("pointerleave", () => { tip.hidden = true; });
+    rowsEl.append(name, track);
+    bar.style.width = (lastPct[r.id] || 0) + "%";
+    lastPct[r.id] = pct;
+    requestAnimationFrame(() => requestAnimationFrame(() => { bar.style.width = pct + "%"; }));
+  });
+  if (rows.length) {
+    const axis = document.createElement("div"); axis.className = "axis";
+    for (let k = 0; k <= 10; k += 2) { const t = document.createElement("span"); t.textContent = toAr(k); t.style.insetInlineStart = k * 10 + "%"; axis.append(t); }
+    const at = document.createElement("div"); at.className = "axis-title"; at.textContent = "المرحلة";
+    rowsEl.append(document.createElement("span"), axis, document.createElement("span"), at);
+  }
+}
+function showView(chart) {
+  $("#tabCards").setAttribute("aria-pressed", !chart);
+  $("#tabChart").setAttribute("aria-pressed", chart);
+  $("#grid").hidden = chart;
+  $("#chart").hidden = !chart;
+}
+$("#tabCards").addEventListener("click", () => showView(false));
+$("#tabChart").addEventListener("click", () => showView(true));
 
 async function load() {
   try {
@@ -119,7 +196,7 @@ async function load() {
     const rows = await res.json();
     render(Array.isArray(rows) ? rows : []);
     $("#status").className = "status";
-    $("#status").textContent = "آخر تحديث: " + new Date().toLocaleTimeString("ar") + " · يتحدّث كل ١٠ ثوانٍ.";
+    $("#status").textContent = "آخر تحديث: " + new Date().toLocaleTimeString("ar") + "، يتحدّث كل ١٠ ثوانٍ.";
   } catch (e) {
     $("#status").className = "status err";
     $("#status").textContent = "تعذّر جلب التقدّم. تأكّد من رابط reportUrl ومن أن النشر متاح لـ Anyone.";
