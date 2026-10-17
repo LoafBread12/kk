@@ -29,9 +29,10 @@ function sheet_(key) {
 }
 
 // Height in cm where each stage begins (same table as the game).
-const HEIGHTS = [0, 5, 15, 30, 50, 80, 120, 180, 260, 400];
-const STAGE_NAMES = ["بذرة", "تنتفخ البذرة", "الجُذير", "النُّبَيتة", "الفلقتان", "الأوراق", "الشتلة", "الشجيرة", "الإزهار", "الإثمار"];
-function stageOf_(h) { let i = 0; while (i < 9 && h >= HEIGHTS[i + 1]) i++; return i; }
+const HEIGHTS = [0, 5, 15, 30, 50, 80, 120, 180, 260, 400, 500, 650, 800, 1000];
+const STAGE_NAMES = ["بذرة", "تنتفخ البذرة", "الجُذير", "النُّبَيتة", "الفلقتان", "الأوراق", "الشتلة", "الشجيرة", "الإزهار", "الإثمار",
+  "شجرة وارفة", "شجرة باسقة", "شجرة عظيمة", "قمّة البستان"];
+function stageOf_(h) { let i = 0; while (i < HEIGHTS.length - 1 && h >= HEIGHTS[i + 1]) i++; return i; }
 const round1_ = n => Math.round(n * 10) / 10;
 function body_(key) {
   const sh = sheet_(key), n = sh.getLastRow() - 1;

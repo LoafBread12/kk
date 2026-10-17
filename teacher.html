@@ -85,7 +85,9 @@ h1{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(28px,5v
 .amt button[aria-pressed="true"]{background:var(--gold);color:#3a2006}
 .t-stage{font-weight:800;font-size:16px}
 .t-stage b{color:var(--leaf-deep)}
-.bar{display:grid;grid-template-columns:repeat(10,1fr);gap:3px}
+.bar{display:grid;grid-template-columns:repeat(14,1fr);gap:3px}
+.bar i.boost{background:rgba(244,195,79,.25)}
+.bar i.boost.on{background:var(--gold)}
 .bar i{height:12px;border-radius:3px;background:rgba(58,36,20,.15)}
 .bar i.on{background:var(--leaf)}
 .team.done .bar i.on{background:var(--red)}
@@ -264,10 +266,10 @@ function renderCards(rows) {
     const top = el("div", "t-top");
     top.append(el("span", "t-name", r.team || "بلا اسم"), el("span", "t-rank", "#" + toAr(i + 1)));
     const height = el("div", "t-height", fmtH(heightOf(r)));
-    const stage = el("div", "t-stage", `المرحلة ${toAr(r.stage)} من ١٠، `);
-    stage.append(el("b", null, r.done ? "أثمرت الشجرة" : r.stageName));
+    const stage = el("div", "t-stage", `المرحلة ${toAr(r.stage)} من ١٤، `);
+    stage.append(el("b", null, r.stage <= 10 && r.done ? "أثمرت الشجرة" : r.stageName));
     const bar = el("div", "bar");
-    for (let k = 0; k < 10; k++) bar.append(el("i", k < r.stage ? "on" : null));
+    for (let k = 0; k < 14; k++) bar.append(el("i", [k >= 10 ? "boost" : "", k < r.stage ? "on" : ""].join(" ").trim() || null));
     const foot = el("div", "t-foot");
     foot.append(el("span", null, `المحطات: ${toAr(r.stations)} من ${toAr(TOTAL)}`), el("span", null, ago(r.updated)));
     card.append(top, height);
@@ -290,7 +292,7 @@ function renderCards(rows) {
 const rowsEl = $("#rows"), tip = $("#tip"), lastPct = {};
 function showTip(e, r) {
   tip.textContent = "";
-  tip.append(el("b", null, r.team || "بلا اسم"), "الطول: " + fmtH(heightOf(r)), el("br"), `المرحلة ${toAr(r.stage)} من ١٠: ${r.done ? "أثمرت الشجرة" : r.stageName}`, el("br"), `المحطات: ${toAr(r.stations)} من ${toAr(TOTAL)}`);
+  tip.append(el("b", null, r.team || "بلا اسم"), "الطول: " + fmtH(heightOf(r)), el("br"), `المرحلة ${toAr(r.stage)} من ١٤: ${r.stage <= 10 && r.done ? "أثمرت الشجرة" : r.stageName}`, el("br"), `المحطات: ${toAr(r.stations)} من ${toAr(TOTAL)}`);
   tip.hidden = false;
   const w = tip.offsetWidth, h = tip.offsetHeight;
   tip.style.left = Math.max(8, Math.min(innerWidth - w - 8, e.clientX - w / 2)) + "px";

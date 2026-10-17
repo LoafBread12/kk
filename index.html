@@ -101,6 +101,8 @@ button,input{font:inherit;color:inherit}
 .track li{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;line-height:1;
   background:rgba(0,0,0,.35);border:2px solid rgba(255,255,255,.2);color:rgba(255,255,255,.55);transition:background .4s,border-color .4s,transform .4s}
 .track li.done{background:var(--leaf);border-color:#a8e08a;color:#0f2d0c}
+.track li.boost{border-style:dashed;border-color:rgba(244,195,79,.7);color:var(--gold)}
+.track li.boost.done{background:var(--gold);border-style:solid;border-color:#fff1bf;color:#4a2c06}
 .track li.now{background:var(--gold);border-color:#fff1bf;color:#4a2c06;transform:scale(1.18);box-shadow:0 0 12px rgba(244,195,79,.8)}
 .next{width:100%;height:7px;border-radius:9px;background:rgba(0,0,0,.4);overflow:hidden;margin-top:4px}
 .next span{display:block;height:100%;width:0;background:linear-gradient(90deg,#a8e08a,var(--leaf));border-radius:9px;transition:width .25s linear;margin-inline-start:0}
@@ -353,7 +355,12 @@ const STAGES = [
   { name: "الشتلة",         desc: "صارت النبتة شتلة، وساقها تزداد طولًا وقوّة." },
   { name: "الشجيرة",        desc: "تحوّلت الساق إلى جذع خشبي، وتفرّعت منه الأغصان." },
   { name: "الإزهار",        desc: "تفتّحت الأزهار على الأغصان، وستصير ثمارًا بإذن الله." },
-  { name: "الإثمار",        desc: "أثمرت الشجرة! الحمد لله الذي أخرج من البذرة الصغيرة شجرة طيّبة." }
+  { name: "الإثمار",        desc: "أثمرت الشجرة! الحمد لله الذي أخرج من البذرة الصغيرة شجرة طيّبة." },
+  // the stages after 4 m are reached only with the teacher's boosts
+  { name: "شجرة وارفة",     desc: "امتدّت الأغصان وكثرت الثمار بفضل التعزيز." },
+  { name: "شجرة باسقة",     desc: "ارتفعت الشجرة عاليًا نحو السماء." },
+  { name: "شجرة عظيمة",     desc: "صارت الشجرة عظيمة، يستظلّ بها الناس." },
+  { name: "قمّة البستان",    desc: "وصلتم إلى ١٠ أمتار! أعلى شجرة في البستان، ما شاء الله." }
 ];
 
 const ICONS = {
@@ -378,7 +385,8 @@ const norm = s => String(s).trim().toLowerCase()
   .replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d))
   .replace(/[إأآ]/g, "ا").replace(/\s+/g, "");
 
-const MAX = STAGES.length - 1;                       // 9 growth steps from seed to fruit
+const MAX = 9;                                       // growth steps watering can give, from seed to fruit (4 m)
+const LAST = STAGES.length - 1;                      // last stage (10 m), reachable only with boosts
 const WPS = MAX / CONFIG.stations.length;            // growth each station's water gives
 const RATE = WPS / CONFIG.pourSeconds;               // growth per second of aimed pouring
 
@@ -475,6 +483,17 @@ const bigTree = () =>
   branch(198, 290, -10, 186, 11) + branch(202, 282, 410, 180, 11) + branch(197, 236, 90, 80, 9) + branch(203, 230, 312, 74, 9) +
   canopy(200, 118, 330, 118, 26, 21, 64);
 
+// trees past 4 m: more fruit, golden fruit, and a glow at the top stages
+const goldFruit = (x, y, k) =>
+  `<g transform="translate(${f1(x)} ${f1(y)}) scale(${k})"><circle r="11" fill="#f4c34f" opacity=".35"/><circle r="8.5" fill="#f2b632"/><circle cx="-3" cy="-3" r="2.6" fill="#fff" opacity=".7"/></g>`;
+function boostTree(nFruit, nGold, glow) {
+  const g = glow ? '<ellipse cx="200" cy="120" rx="360" ry="190" fill="#fff3b0" opacity=".22"/><ellipse cx="200" cy="120" rx="300" ry="150" fill="#fff3b0" opacity=".18"/>' : "";
+  const sparks = glow ? pts(200, 110, 360, 170, 16, 77).map(p => `<path d="M${f1(p[0])} ${f1(p[1] - 9)}L${f1(p[0] + 3)} ${f1(p[1])}L${f1(p[0])} ${f1(p[1] + 9)}L${f1(p[0] - 3)} ${f1(p[1])}Z" fill="#fff6c8"/>`).join("") : "";
+  return { r: roots(84, 9, "#a77b4c", 6.5), a: g + fruit(152, 351) + fruit(250, 355) + fruit(300, 352) + bigTree() +
+    pts(200, 124, 310, 112, nFruit, 33).map(p => fruit(p[0], p[1], 1.6)).join("") +
+    pts(200, 110, 280, 100, nGold, 91).map(p => goldFruit(p[0], p[1], 1.5)).join("") + sparks };
+}
+
 const DRAW = [
   () => ({ r: "", a: dimple + seed(200, 347, -14, 1, false) }),
   () => ({ r: roots(6, 0, "#f3e6c8", 2.4), a: dimple + seed(200, 346, -14, 1.2, true) }),
@@ -490,7 +509,11 @@ const DRAW = [
       canopy(200, 176, 175, 82, 14, 11, 50) }),
   () => ({ r: roots(84, 9, "#a77b4c", 6.5), a: bigTree() + pts(200, 120, 300, 108, 46, 31).map(p => blossom(p[0], p[1], 1.5)).join("") }),
   () => ({ r: roots(84, 9, "#a77b4c", 6.5), a: fruit(152, 351) + fruit(250, 355) + bigTree() +
-      pts(200, 120, 300, 108, 10, 57).map(p => blossom(p[0], p[1], 1.4)).join("") + pts(200, 124, 300, 110, 38, 33).map(p => fruit(p[0], p[1], 1.6)).join("") })
+      pts(200, 120, 300, 108, 10, 57).map(p => blossom(p[0], p[1], 1.4)).join("") + pts(200, 124, 300, 110, 38, 33).map(p => fruit(p[0], p[1], 1.6)).join("") }),
+  () => boostTree(52, 0, false),
+  () => boostTree(56, 8, false),
+  () => boostTree(58, 12, true),
+  () => boostTree(60, 18, true)
 ];
 
 /* static soil details */
@@ -517,7 +540,12 @@ const garden = $("#garden"), board = $("#board"), canEl = $("#can"), canvas = $(
 const plantG = $("#plant"), rootsG = $("#roots"), popG = $("#plantPop"), soilTop = $("#soilTop"), soilBody = $("#soilBody");
 
 const track = $("#track");
-STAGES.forEach((s, i) => { const li = document.createElement("li"); li.textContent = toAr(i + 1); li.title = s.name; track.appendChild(li); });
+STAGES.forEach((s, i) => {
+  const li = document.createElement("li"); li.textContent = toAr(i + 1);
+  li.title = s.name + (i > MAX ? " (بالتعزيز فقط)" : "");
+  if (i > MAX) li.className = "boost";
+  track.appendChild(li);
+});
 const pipsEl = $("#pips");
 CONFIG.stations.forEach(() => pipsEl.appendChild(document.createElement("i")));
 
@@ -619,10 +647,10 @@ function nextToast() {
 /* ---------- plant + HUD ---------- */
 // Height in cm where each stage begins. Watering grows the plant along this curve up to 4 m;
 // the teacher's boosts and cuts (state.adj) add to or take from that height.
-const HEIGHTS = [0, 5, 15, 30, 50, 80, 120, 180, 260, 400];
+const HEIGHTS = [0, 5, 15, 30, 50, 80, 120, 180, 260, 400, 500, 650, 800, 1000];
 const growthCm = p => { const i = Math.min(MAX - 1, Math.floor(p)); return HEIGHTS[i] + (HEIGHTS[i + 1] - HEIGHTS[i]) * (p - i); };
 const heightCm = () => Math.max(0, growthCm(state.progress) + state.adj);
-const stageOfH = h => { let i = 0; while (i < MAX && h >= HEIGHTS[i + 1] - 1e-6) i++; return i; };
+const stageOfH = h => { let i = 0; while (i < LAST && h >= HEIGHTS[i + 1] - 1e-6) i++; return i; };
 const fmtH = h => h < 100 ? toAr(Math.round(h)) + " سم" : toAr((h / 100).toFixed(2)).replace(".", "٫") + " م";
 let curStage = -1, complete = false;
 function setStage(i, animate) {
@@ -632,29 +660,37 @@ function setStage(i, animate) {
   $("#stageAria").textContent = "المرحلة " + toAr(i + 1) + ": " + STAGES[i].name;
   $("#stageNum").textContent = `المرحلة ${toAr(i + 1)} من ${toAr(STAGES.length)}`;
   $("#stageName").textContent = STAGES[i].name;
-  [...track.children].forEach((li, k) => { li.classList.toggle("done", k < i || (k === i && i === MAX)); li.classList.toggle("now", k === i && i !== MAX); });
+  [...track.children].forEach((li, k) => { li.classList.toggle("done", k < i || (k === i && i === LAST)); li.classList.toggle("now", k === i && i !== LAST); });
   const tk = $("#ticker");
   if (animate) { tk.classList.add("fade"); setTimeout(() => { tk.textContent = STAGES[i].desc; tk.classList.remove("fade"); }, 350); }
   else tk.textContent = STAGES[i].desc;
   if (animate) {
     popG.classList.remove("pop"); void popG.getBoundingClientRect(); popG.classList.add("pop");
     burst();
-    if (i < MAX) toast("مرحلة جديدة!", toAr(i + 1) + ". " + STAGES[i].name);
+    if (i === LAST) toast("وصلتم إلى ١٠ أمتار!", STAGES[i].name, 4000);
+    else if (i !== MAX) toast("مرحلة جديدة!", toAr(i + 1) + ". " + STAGES[i].name);
     report();
   }
 }
 popG.addEventListener("animationend", () => popG.classList.remove("pop"));
 
-let shownH = "";
+let shownH = "", zoom = 1;
 function updatePlantScale() {
   const h = heightCm();
-  const frac = curStage >= MAX ? 1 : Math.max(0, (h - HEIGHTS[curStage]) / (HEIGHTS[curStage + 1] - HEIGHTS[curStage]));
+  const frac = curStage >= LAST ? 1 : Math.max(0, (h - HEIGHTS[curStage]) / (HEIGHTS[curStage + 1] - HEIGHTS[curStage]));
   let s = (curStage >= 7 ? .93 : .88) + (curStage >= 7 ? .07 : .12) * Math.min(1, frac);
-  if (curStage >= MAX) s = 1 + Math.min(.12, (h - HEIGHTS[MAX]) / 2500);
+  // above 4 m the tree keeps growing and the view zooms out with it, so the soil shrinks below it
+  const z = h > HEIGHTS[MAX] ? 1 + Math.min(.9, (h - HEIGHTS[MAX]) / (HEIGHTS[LAST] - HEIGHTS[MAX]) * .8) : 1;
+  if (curStage >= MAX) s = z;
+  if (Math.abs(z - zoom) > .004) {
+    zoom = z;
+    scene.setAttribute("viewBox", `${(200 - 380 * z).toFixed(1)} ${(460 - 500 * z).toFixed(1)} ${(760 * z).toFixed(1)} ${(500 * z).toFixed(1)}`);
+    measure();
+  }
   const txt = fmtH(h);
   if (txt !== shownH) { $("#heightTxt").textContent = txt; shownH = txt; }
   plantG.setAttribute("transform", `translate(200 352) scale(${s.toFixed(3)}) translate(-200 -352)`);
-  $("#nextBar").style.width = (curStage >= MAX ? 100 : Math.min(1, frac) * 100) + "%";
+  $("#nextBar").style.width = (curStage >= LAST ? 100 : Math.min(1, frac) * 100) + "%";
 }
 
 let hintState = "";
