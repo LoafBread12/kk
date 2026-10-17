@@ -66,9 +66,8 @@ button,input{font:inherit;color:inherit}
 .hill{position:absolute;left:-10%;right:-10%;bottom:-38cqh;height:62cqh;border-radius:50%;
   background:radial-gradient(ellipse at 50% 20%,#4f9a45,#2f6b2a 60%,#1f4d1f);z-index:0}
 
-.stage-wrap{position:absolute;left:50%;bottom:104px;z-index:1;transform:translateX(-50%);
-  width:max(190px,min(80cqw,calc((100cqh - 262px) * .87),600px));aspect-ratio:400/460;max-width:100%}
-.rays{position:absolute;left:50%;top:44%;width:190%;aspect-ratio:1;translate:-50% -50%;pointer-events:none;
+.stage-wrap{position:absolute;left:0;right:0;top:150px;bottom:100px;z-index:1}
+.rays{position:absolute;left:50%;top:50%;width:min(130%,1100px);aspect-ratio:1;translate:-50% -50%;pointer-events:none;
   background:repeating-conic-gradient(rgba(255,255,255,.11) 0 9deg,transparent 9deg 22deg);
   -webkit-mask:radial-gradient(circle,#000 18%,transparent 62%);mask:radial-gradient(circle,#000 18%,transparent 62%);
   animation:spin 80s linear infinite}
@@ -216,7 +215,7 @@ button,input{font:inherit;color:inherit}
 
     <div class="stage-wrap" id="stageWrap">
       <div class="rays"></div>
-      <svg id="scene" viewBox="0 0 400 460" role="img" aria-labelledby="stageAria">
+      <svg id="scene" viewBox="-180 -40 760 500" preserveAspectRatio="xMidYMax meet" role="img" aria-labelledby="stageAria">
         <title id="stageAria">البذرة في التراب</title>
         <defs>
           <clipPath id="soilClip"><path d="M50 350A150 14 0 0 0 350 350Q352 440 200 446Q48 440 50 350Z"/></clipPath>
@@ -393,7 +392,7 @@ function trunk(b, top, t) {
 const branch = (x1, y1, x2, y2, w) =>
   `<path d="M${x1} ${y1}Q${(x1 + x2) / 2 + (x2 > x1 ? -10 : 10)} ${(y1 + y2) / 2 + 8} ${x2} ${y2}" stroke="#7b4a26" stroke-width="${w}" fill="none" stroke-linecap="round"/>`;
 
-function canopy(cx, cy, rx, ry, n, sd) {
+function canopy(cx, cy, rx, ry, n, sd, rr = rx * .33) {
   const r = rng(sd), shades = ["#3a8234", "#55a443", "#78c45a"];
   let s = "";
   for (let layer = 0; layer < 3; layer++) {
@@ -401,7 +400,7 @@ function canopy(cx, cy, rx, ry, n, sd) {
       const a = r() * Math.PI * 2, d = Math.sqrt(r()) * (1 - layer * .2);
       const x = cx + Math.cos(a) * rx * d * .8 - layer * rx * .06;
       const y = cy + Math.sin(a) * ry * d * .8 - layer * ry * .12;
-      const rad = rx * .33 * (.7 + r() * .45) * (1 - layer * .22);
+      const rad = rr * (.7 + r() * .45) * (1 - layer * .22);
       s += `<circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(rad)}" fill="${shades[layer]}"/>`;
     }
   }
@@ -416,18 +415,19 @@ function pts(cx, cy, rx, ry, n, sd) {
   }
   return o;
 }
-function blossom(x, y) {
-  let s = `<g transform="translate(${f1(x)} ${f1(y)})">`;
+function blossom(x, y, k = 1) {
+  let s = `<g transform="translate(${f1(x)} ${f1(y)}) scale(${k})">`;
   for (let i = 0; i < 5; i++) { const a = i * 1.2566 - 1.57; s += `<circle cx="${f1(Math.cos(a) * 4.2)}" cy="${f1(Math.sin(a) * 4.2)}" r="3.6" fill="${i % 2 ? "#ffd3e0" : "#fff6f8"}"/>`; }
   return s + `<circle r="2.4" fill="#f4c34f"/></g>`;
 }
-const fruit = (x, y) =>
-  `<g transform="translate(${f1(x)} ${f1(y)})"><path d="M0-8q1-6 5-7" stroke="#5a3418" stroke-width="1.8" fill="none" stroke-linecap="round"/>${leaf(2, -12, 9, -30, "#4f9e3f", .5)}<circle r="9" fill="#e0453a"/><path d="M-7 3a9 9 0 0 0 13 3" stroke="#a82a22" stroke-width="2" fill="none" opacity=".6"/><circle cx="-3" cy="-3.5" r="2.6" fill="#fff" opacity=".55"/></g>`;
+const fruit = (x, y, k = 1) =>
+  `<g transform="translate(${f1(x)} ${f1(y)}) scale(${k})"><path d="M0-8q1-6 5-7" stroke="#5a3418" stroke-width="1.8" fill="none" stroke-linecap="round"/>${leaf(2, -12, 9, -30, "#4f9e3f", .5)}<circle r="9" fill="#e0453a"/><path d="M-7 3a9 9 0 0 0 13 3" stroke="#a82a22" stroke-width="2" fill="none" opacity=".6"/><circle cx="-3" cy="-3.5" r="2.6" fill="#fff" opacity=".55"/></g>`;
 
 const dimple = '<ellipse cx="200" cy="352" rx="24" ry="5" fill="#000" opacity=".22"/>';
 const bigTree = () =>
-  trunk(19, 200, 7) + branch(198, 255, 136, 182, 10) + branch(202, 238, 264, 172, 10) + branch(200, 215, 200, 126, 8) +
-  branch(199, 274, 122, 230, 6) + branch(201, 262, 282, 222, 6) + canopy(200, 158, 138, 98, 12, 21);
+  trunk(34, 190, 13) + branch(196, 262, 30, 170, 16) + branch(204, 248, 372, 160, 16) + branch(200, 222, 196, 40, 14) +
+  branch(198, 290, -10, 186, 11) + branch(202, 282, 410, 180, 11) + branch(197, 236, 90, 80, 9) + branch(203, 230, 312, 74, 9) +
+  canopy(200, 118, 330, 118, 26, 21, 64);
 
 const DRAW = [
   () => ({ r: "", a: dimple + seed(200, 347, -14, 1, false) }),
@@ -440,11 +440,11 @@ const DRAW = [
   () => ({ r: roots(72, 7, "#d9bd8c", 4.6), a: stem(188, 10, "#7fae45") + '<path d="M200 353C198 332 202 318 201 300" fill="none" stroke="#9a6a3c" stroke-width="10" stroke-linecap="round"/>' +
       leaf(201, 318, 48, -172, G3) + leaf(201, 296, 50, -10, G3) + leaf(201, 270, 46, -165, G2) + leaf(201, 248, 46, -18, G2) +
       leaf(201, 226, 40, -150, G2) + leaf(201, 208, 38, -32, G1) + leaf(200, 190, 30, -112, G1) + leaf(200, 190, 30, -68, G1) }),
-  () => ({ r: roots(80, 8, "#b58b5c", 5.5), a: trunk(12, 232, 5) + branch(199, 262, 158, 204, 6) + branch(201, 250, 240, 198, 6) + branch(200, 238, 198, 172, 5) +
-      canopy(200, 188, 90, 64, 8, 11) }),
-  () => ({ r: roots(84, 9, "#a77b4c", 6.5), a: bigTree() + pts(200, 156, 118, 82, 18, 31).map(p => blossom(p[0], p[1])).join("") }),
+  () => ({ r: roots(80, 8, "#b58b5c", 5.5), a: trunk(20, 222, 8) + branch(198, 272, 90, 196, 9) + branch(202, 260, 310, 190, 9) + branch(200, 240, 198, 130, 7) +
+      canopy(200, 176, 175, 82, 14, 11, 50) }),
+  () => ({ r: roots(84, 9, "#a77b4c", 6.5), a: bigTree() + pts(200, 120, 300, 108, 46, 31).map(p => blossom(p[0], p[1], 1.5)).join("") }),
   () => ({ r: roots(84, 9, "#a77b4c", 6.5), a: fruit(152, 351) + fruit(250, 355) + bigTree() +
-      pts(200, 156, 118, 82, 5, 57).map(p => blossom(p[0], p[1])).join("") + pts(200, 160, 120, 84, 14, 33).map(p => fruit(p[0], p[1])).join("") })
+      pts(200, 120, 300, 108, 10, 57).map(p => blossom(p[0], p[1], 1.4)).join("") + pts(200, 124, 300, 110, 38, 33).map(p => fruit(p[0], p[1], 1.6)).join("") })
 ];
 
 /* static soil details */
@@ -626,7 +626,13 @@ function measure() {
   const s = soilTop.getBoundingClientRect();
   soil = { l: s.left - g.left, r: s.right - g.left, cx: (s.left + s.right) / 2 - g.left, cy: (s.top + s.bottom) / 2 - g.top };
 }
-new ResizeObserver(measure).observe(garden);
+const scene = $("#scene"), stageWrap = $("#stageWrap");
+function fitScene() {
+  // wide box: show the whole tree; narrow box: fill the height and let the canopy run off the sides
+  const r = stageWrap.getBoundingClientRect();
+  scene.setAttribute("preserveAspectRatio", r.width / Math.max(1, r.height) > 760 / 500 ? "xMidYMax meet" : "xMidYMax slice");
+}
+new ResizeObserver(() => { fitScene(); measure(); }).observe(garden);
 window.addEventListener("resize", measure);
 
 /* ---------- watering can + input ---------- */
@@ -811,7 +817,7 @@ resetBtn.addEventListener("click", () => {
 });
 
 /* ---------- start ---------- */
-measure();
+fitScene(); measure();
 renderStations();
 setStage(stageOf(state.progress), false);
 if (state.progress >= MAX) finish(false);
