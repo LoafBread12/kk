@@ -10,7 +10,8 @@ const TEACHER_PIN = "1234";
 const SHEETS = {
   progress: { name: "التقدم", headers: ["الجهاز", "الفريق", "المرحلة", "اسم المرحلة", "المحطات المفتوحة", "انتهى", "آخر تحديث", "النمو بالسقي (سم)", "تعديل المعلّم (سم)", "الطول (سم)"] },
   log:      { name: "السجل",  headers: ["الوقت", "الجولة", "الجهاز", "الفريق", "المرحلة", "المحطات المفتوحة", "انتهى", "الطول (سم)"] },
-  rounds:   { name: "الجولات", headers: ["الجولة", "البداية", "النهاية"] }
+  rounds:   { name: "الجولات", headers: ["الجولة", "البداية", "النهاية"] },
+  items:    { name: "العناصر", headers: ["المعرّف", "الجهاز", "الفريق", "النوع", "المقدار (سم)", "وقت الإعطاء", "وقت الاستخدام"] }
 };
 
 function sheet_(key) {
@@ -109,6 +110,35 @@ function adjust_(d, st) {
   return out_({ ok: true, state: state_() });
 }
 
+// The teacher gives a team an item (fertilizer or a rain cloud); the team uses it from its own device.
+const ITEM_KINDS = ["fert", "rain"];
+function give_(d) {
+  const id = clean_(d.id, 40);
+  const amount = Math.max(1, Math.min(1000, Number(d.delta) || 0));
+  const kind = ITEM_KINDS.indexOf(d.kind) >= 0 ? d.kind : "fert";
+  const r = body_("progress").find(x => String(x[0]) === id);
+  if (!r) return out_({ error: "bad_team" });
+  const key = "i" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  sheet_("items").appendRow([key, id, r[1], kind, amount, new Date(), ""]);
+  return out_({ ok: true, state: state_() });
+}
+// A team activates one of its items: mark it used and add its height. Safe to call twice.
+function useItem_(d) {
+  const st = state_();
+  if (d.gameId && d.gameId !== st.gameId) return out_({ ignored: true });
+  const id = clean_(d.id, 40), key = String(d.key || "");
+  const sh = sheet_("items"), body = body_("items");
+  const i = body.findIndex(r => String(r[0]) === key && String(r[1]) === id);
+  if (i < 0) return out_({ error: "bad_item" });
+  if (body[i][6]) return out_({ ok: true, already: true });
+  sh.getRange(i + 2, 7).setValue(new Date());
+  return adjust_({ id: id, delta: Number(body[i][4]) || 0 }, st);
+}
+function pendingItems_(id) {
+  return body_("items").filter(r => !r[6] && (!id || String(r[1]) === id))
+    .map(r => ({ key: String(r[0]), id: String(r[1]), kind: String(r[3]), amount: Number(r[4]) || 0 }));
+}
+
 function control_(d) {
   if (String(d.pin) !== TEACHER_PIN) return out_({ error: "bad_pin" });
   const st = state_();
@@ -128,10 +158,12 @@ function control_(d) {
   } else if (d.action === "over") {
     if (st.status === "running") closeRound();
     setState_({ status: "over" });
+  } else if (d.action === "give") {
+    return give_(d);
   } else if (d.action === "adjust") {
     return adjust_(d, st);
   } else if (d.action === "new") {
-    clear_("progress"); clear_("log"); clear_("rounds");
+    clear_("progress"); clear_("log"); clear_("rounds"); clear_("items");
     setState_({ status: "idle", round: 0, gameId: "g" + Date.now().toString(36) });
   } else {
     return out_({ error: "bad_action" });
@@ -144,7 +176,9 @@ function doPost(e) {
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    return d.type === "control" ? control_(d) : report_(d);
+    if (d.type === "control") return control_(d);
+    if (d.type === "useItem") return useItem_(d);
+    return report_(d);
   } finally {
     lock.releaseLock();
   }
@@ -158,6 +192,7 @@ function doGet(e) {
     if (id) {
       const r = body_("progress").find(x => String(x[0]) === id);
       st.adj = r ? Number(r[8]) || 0 : 0;
+      st.items = pendingItems_(id).map(x => ({ key: x.key, kind: x.kind, amount: x.amount }));
     }
     return out_(st);
   }
@@ -169,10 +204,12 @@ function doGet(e) {
     }));
     return out_({ state: st, rounds: rounds, log: log });
   }
+  const pending = pendingItems_();
   const rows = body_("progress").map(r => ({
     id: String(r[0]), team: plain_(r[1]), stage: Number(r[2]) || 1, stageName: String(r[3]),
     stations: Number(r[4]) || 0, done: r[5] === "نعم", updated: iso_(r[6]),
-    growth: Number(r[7]) || 0, adj: Number(r[8]) || 0, height: Number(r[9]) || 0
+    growth: Number(r[7]) || 0, adj: Number(r[8]) || 0, height: Number(r[9]) || 0,
+    items: pending.filter(x => x.id === String(r[0])).length
   }));
   return out_({ state: st, rows: rows });
 }

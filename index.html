@@ -76,6 +76,40 @@ button,input{font:inherit;color:inherit}
 #scene{position:relative;width:100%;height:100%;overflow:visible;display:block}
 #plantPop{transform-box:view-box;transform-origin:200px 352px}
 #plantPop.pop{animation:pop .7s cubic-bezier(.3,1.6,.5,1)}
+#plantPop.wilt{animation:wilt 1.5s ease-in-out}
+@keyframes wilt{10%,30%,50%{transform:rotate(-3deg) scale(.97)}20%,40%,60%{transform:rotate(3deg) scale(.95)}80%{transform:scale(.96)}}
+.stage-wrap.wilt #scene{animation:wiltf 1.6s ease-in-out}
+@keyframes wiltf{40%{filter:saturate(.3) sepia(.35) brightness(.85)}}
+
+/* teacher's gift items and their animations */
+.tray{position:absolute;left:14px;top:290px;z-index:6;display:grid;gap:8px;justify-items:start;max-width:46%}
+.tray-title{margin:0;font-weight:800;font-size:13px;background:rgba(0,0,0,.45);border-radius:20px;padding:0 10px}
+#trayItems{display:grid;gap:8px;justify-items:start}
+.item{display:flex;align-items:center;gap:8px;padding:6px 14px 6px 8px;border:0;border-radius:12px;cursor:pointer;color:var(--ink-dark);text-align:start;
+  background:linear-gradient(180deg,var(--parch),var(--parch-2));box-shadow:0 0 0 2px var(--gold),0 4px 0 rgba(0,0,0,.3);animation:glowItem 1.6s ease-in-out infinite}
+.item svg{width:42px;height:42px;flex:none}
+.item small{display:block;font-weight:800;font-size:12px;line-height:1.2}
+.item b{display:block;font-family:var(--f-display);font-weight:400;font-size:22px;line-height:1.1;color:var(--leaf-deep)}
+.item:active{transform:translateY(2px)}
+.item.new{animation:itemIn .6s cubic-bezier(.3,1.6,.5,1),glowItem 1.6s ease-in-out .6s infinite}
+@keyframes glowItem{50%{box-shadow:0 0 0 2px var(--gold),0 0 20px rgba(244,195,79,.85),0 4px 0 rgba(0,0,0,.3)}}
+@keyframes itemIn{from{transform:scale(.3) rotate(-20deg);opacity:0}}
+.fx-item{position:absolute;z-index:4;pointer-events:none;translate:-50% -50%}
+.fx-item svg{display:block;width:100%;height:100%;overflow:visible}
+.fx-item.sack{width:96px;height:110px;animation:sack 2.4s ease-in-out forwards}
+@keyframes sack{0%{transform:translateY(-60px);opacity:0}15%{transform:none;opacity:1}30%,75%{transform:rotate(-62deg)}90%{transform:rotate(-62deg);opacity:1}100%{transform:rotate(-20deg) translateY(-30px);opacity:0}}
+.fx-item.cloud{width:230px;height:120px;animation:cloud 2.6s ease-in-out forwards}
+@keyframes cloud{0%{transform:scale(.6);opacity:0}15%{transform:none;opacity:1}30%,60%{transform:translateX(-6px)}45%,75%{transform:translateX(6px)}85%{opacity:1}100%{transform:translateY(-20px);opacity:0}}
+.float{position:absolute;z-index:6;pointer-events:none;translate:-50% -50%;font-family:var(--f-display);font-size:clamp(40px,6cqw,64px);line-height:1;white-space:nowrap;
+  -webkit-text-stroke:2px rgba(0,0,0,.45);paint-order:stroke;animation:floatUp 2.4s ease-out forwards}
+.float.up{color:#b8f39a}
+.float.down{color:#ff8a7a;animation-name:floatDown}
+@keyframes floatUp{0%{transform:translateY(20px) scale(.5);opacity:0}15%{transform:scale(1.15);opacity:1}30%{transform:scale(1)}80%{opacity:1}100%{transform:translateY(-90px);opacity:0}}
+@keyframes floatDown{0%{transform:translateY(-20px) scale(.5);opacity:0}15%{transform:scale(1.15);opacity:1}30%{transform:scale(1)}80%{opacity:1}100%{transform:translateY(70px);opacity:0}}
+.g-height.up #heightTxt{animation:hUp 2s ease}
+.g-height.down #heightTxt{animation:hDown 2s ease}
+@keyframes hUp{20%,60%{color:#b8f39a;text-shadow:0 0 14px rgba(184,243,154,.9)}}
+@keyframes hDown{20%,60%{color:#ff8a7a;text-shadow:0 0 14px rgba(255,138,122,.9)}}
 @keyframes pop{0%{transform:scale(.82)}100%{transform:scale(1)}}
 #plantSway{transform-box:view-box;transform-origin:200px 352px;animation:sway 5s ease-in-out infinite}
 @keyframes sway{0%,100%{transform:rotate(-1deg)}50%{transform:rotate(1deg)}}
@@ -218,6 +252,7 @@ button,input{font:inherit;color:inherit}
   .divider{margin:4px 0;background:var(--grain),linear-gradient(180deg,var(--wood-700),var(--wood-300) 45%,var(--wood-500) 60%,var(--wood-700))}
   .board{overflow:visible}
   .sun{width:46px;height:46px;top:200px;left:12px}
+  .tray{top:310px}
 }
 @media (max-width:420px){
   .track li{width:21px;height:21px;font-size:11px}
@@ -301,6 +336,11 @@ button,input{font:inherit;color:inherit}
         <p class="join-msg" id="joinMsg" aria-live="polite"></p>
       </div>
     </form>
+
+    <div class="tray" id="tray" hidden>
+      <p class="tray-title">هدايا المعلّم، اضغطوا لاستخدامها</p>
+      <div id="trayItems"></div>
+    </div>
 
     <div class="pause" id="pause" hidden>
       <div class="pause-card" role="status" aria-live="polite"><h2 id="pauseTitle"></h2><p id="pauseText"></p></div>
@@ -649,7 +689,11 @@ function nextToast() {
 // the teacher's boosts and cuts (state.adj) add to or take from that height.
 const HEIGHTS = [0, 5, 15, 30, 50, 80, 120, 180, 260, 400, 500, 650, 800, 1000];
 const growthCm = p => { const i = Math.min(MAX - 1, Math.floor(p)); return HEIGHTS[i] + (HEIGHTS[i + 1] - HEIGHTS[i]) * (p - i); };
-const heightCm = () => Math.max(0, growthCm(state.progress) + state.adj);
+// what the screen shows: the teacher's changes animate in (vis.adj), and an item's height
+// is held back (hold) until its animation finishes
+const vis = { adj: state.adj };
+let hold = 0;
+const heightCm = () => Math.max(0, growthCm(state.progress) + vis.adj);
 const stageOfH = h => { let i = 0; while (i < LAST && h >= HEIGHTS[i + 1] - 1e-6) i++; return i; };
 const fmtH = h => h < 100 ? toAr(Math.round(h)) + " سم" : toAr((h / 100).toFixed(2)).replace(".", "٫") + " م";
 let curStage = -1, complete = false;
@@ -672,7 +716,7 @@ function setStage(i, animate) {
     report();
   }
 }
-popG.addEventListener("animationend", () => popG.classList.remove("pop"));
+popG.addEventListener("animationend", () => popG.classList.remove("pop", "wilt"));
 
 let shownH = "", zoom = 1;
 function updatePlantScale() {
@@ -748,7 +792,7 @@ function needWater() {
 }
 board.addEventListener("animationend", e => { if (e.animationName === "nudge") board.classList.remove("nudge"); });
 garden.addEventListener("pointerdown", e => {
-  if (e.button > 0 || complete || !joinEl.hidden) return;
+  if (e.button > 0 || complete || !joinEl.hidden || e.target.closest(".tray")) return;
   if (!canWater()) { pausedToast(); return; }
   if (state.water <= 0) { needWater(); return; }
   dragging = true; setPtr(e);
@@ -839,6 +883,12 @@ function tick(now) {
       save();
     }
   }
+  const targetAdj = state.adj - hold;
+  if (Math.abs(targetAdj - vis.adj) > .05) {
+    vis.adj += (targetAdj - vis.adj) * Math.min(1, dt * 2.2);
+    const st = stageOfH(heightCm());
+    if (st !== curStage) setStage(st, st > curStage);
+  } else vis.adj = targetAdj;
   updatePlantScale();
   updateHUD(pouring, aimed);
 
@@ -850,6 +900,12 @@ function tick(now) {
   }
 
   ctx.clearRect(0, 0, GW, GH);
+  for (const em of emitters) {
+    if (now < em.start) continue;
+    em.acc += dt * em.rate;
+    while (em.acc > 1) { em.acc--; parts.push(em.make()); }
+  }
+  emitters = emitters.filter(em => now < em.until);
   const next = [];
   for (const p of parts) {
     if (p.t === "drop") {
@@ -867,13 +923,33 @@ function tick(now) {
     } else if (p.t === "splash") {
       p.life -= dt * 3; if (p.life <= 0) continue;
       p.vy += 500 * dt; p.x += p.vx * dt; p.y += p.vy * dt;
-      ctx.fillStyle = `rgba(170,225,255,${p.life})`;
+      ctx.fillStyle = `rgba(${p.c || "170,225,255"},${p.life})`;
       ctx.beginPath(); ctx.arc(p.x, p.y, 1.6, 0, 6.283); ctx.fill();
     } else if (p.t === "spark") {
       p.life -= dt * 1.1; if (p.life <= 0) continue;
       p.vx *= .97; p.vy = p.vy * .97 + 40 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.rot += dt * 3;
       ctx.fillStyle = `rgba(255,224,130,${p.life})`;
       star(p.x, p.y, p.s * (.5 + p.life * .5), p.rot);
+    } else if (p.t === "grain" || p.t === "rain") {
+      p.vy += (p.t === "rain" ? 600 : 800) * dt; p.x += p.vx * dt; p.y += p.vy * dt;
+      if (p.y >= soil.cy && p.x > soil.l + 6 && p.x < soil.r - 6) {
+        if (p.t === "rain") wet = Math.min(1.2, wet + .01);
+        next.push({ t: "splash", x: p.x, y: soil.cy, vx: (Math.random() - .5) * 70, vy: -50 - Math.random() * 40, life: 1, c: p.t === "rain" ? null : "120,90,50" });
+        continue;
+      }
+      if (p.y > GH + 10) continue;
+      if (p.t === "rain") {
+        ctx.strokeStyle = "rgba(160,220,255,.9)"; ctx.lineWidth = 2.2; ctx.lineCap = "round";
+        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.vx * .03, p.y - 10); ctx.stroke();
+      } else {
+        ctx.fillStyle = p.c; ctx.beginPath(); ctx.arc(p.x, p.y, 2.6, 0, 6.283); ctx.fill();
+      }
+    } else if (p.t === "leaf") {
+      p.y += p.vy * dt; p.x += p.vx * dt + Math.sin(now / 300 + p.rot) * .8; p.rot += p.vr * dt;
+      if (p.y > soil.cy + 6) p.life -= dt * 2.5;
+      if (p.life <= 0 || p.y > GH + 10) continue;
+      ctx.save(); ctx.globalAlpha = Math.max(0, p.life); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.c;
+      ctx.beginPath(); ctx.ellipse(0, 0, 7, 3.2, 0, 0, 6.283); ctx.fill(); ctx.restore();
     } else if (p.t === "conf") {
       p.y += p.vy * dt; p.x += p.vx * dt + Math.sin(now / 400 + p.rot) * .6; p.rot += p.vr * dt;
       if (p.y > GH + 20) continue;
@@ -975,6 +1051,7 @@ async function pollRound() {
   if (s.gameId && state.gameId && s.gameId !== state.gameId) {
     // the teacher started a new game: start this device over
     state = { unlocked: [], water: 0, progress: 0, team: "", gameId: s.gameId, adj: 0 };
+    vis.adj = 0; hold = 0; items = []; Object.keys(inFlight).forEach(k => delete inFlight[k]); renderItems();
     complete = false; parts = []; wet = 0;
     save(true);
     if (openId) toggleStation(openId);
@@ -983,7 +1060,13 @@ async function pollRound() {
   } else if (s.gameId && !state.gameId) {
     state.gameId = s.gameId; save(true);
   }
-  if (typeof s.adj === "number" && s.adj !== state.adj) applyAdj(s.adj);
+  if (Array.isArray(s.items)) syncItems(s.items);
+  if (typeof s.adj === "number") {
+    // items used here that the sheet has not counted yet still belong to this device's height
+    const pendingUse = Object.values(inFlight).reduce((a, x) => a + x.amount, 0);
+    const target = s.adj + pendingUse;
+    if (Math.abs(target - state.adj) > .05) applyAdj(target);
+  }
   const was = round.status;
   round.status = s.status; round.n = Number(s.round) || 0;
   renderRound();
@@ -996,15 +1079,129 @@ async function pollRound() {
 function applyAdj(adj) {
   const delta = adj - state.adj;
   state.adj = adj; save(true);
-  const st = stageOfH(heightCm());
-  if (st !== curStage) setStage(st, false);
-  if (delta > 0) {
-    popG.classList.remove("pop"); void popG.getBoundingClientRect(); popG.classList.add("pop");
-    burst();
-    toast("تعزيز من المعلّم!", "زاد طول النبتة " + fmtH(delta), 3200);
-  } else if (delta < 0) {
-    toast("قرار من المعلّم", "نقص طول النبتة " + fmtH(-delta), 3200);
+  if (delta > 0) growFx(delta, "زاد طول النبتة");
+  else if (delta < 0) cutFx(-delta);
+}
+
+/* ---------- gift items: the teacher gives them, the team uses them ---------- */
+const ITEM_INFO = {
+  fert: { name: "سماد", use: "استخدموا السماد", art: '<svg viewBox="0 0 100 110" aria-hidden="true"><path d="M30 22Q50 14 70 22L76 30Q50 24 24 30Z" fill="#c9a26a"/><path d="M24 30Q50 24 76 30L84 92Q50 104 16 92Z" fill="#b8874f" stroke="#7a5530" stroke-width="3" stroke-linejoin="round"/><path d="M30 14Q50 4 70 14L68 24Q50 18 32 24Z" fill="#d9b67f" stroke="#7a5530" stroke-width="3"/><path d="M38 12Q50 22 62 12" stroke="#7a5530" stroke-width="3" fill="none"/><circle cx="50" cy="62" r="17" fill="#f2e6c9"/><path d="M50 74C42 66 42 54 52 48C58 56 58 66 50 74Z" fill="#5aa845"/><path d="M50 74L52 52" stroke="#2f6b2a" stroke-width="2"/></svg>' },
+  rain: { name: "غيمة مطر", use: "استخدموا الغيمة", art: '<svg viewBox="0 0 230 120" aria-hidden="true"><path d="M50 100H180A38 38 0 0 0 186 25A52 52 0 0 0 88 26A42 42 0 0 0 50 100Z" fill="#fff"/><path d="M50 100H180A38 38 0 0 0 214 70Q200 92 172 90H58Q30 92 16 72A42 42 0 0 0 50 100Z" fill="#d6e6f0"/><g fill="#86d6ff"><path d="M80 108l-5 10" stroke="#86d6ff" stroke-width="4" stroke-linecap="round"/><path d="M115 108l-5 10" stroke="#86d6ff" stroke-width="4" stroke-linecap="round"/><path d="M150 108l-5 10" stroke="#86d6ff" stroke-width="4" stroke-linecap="round"/></g></svg>' }
+};
+let items = [], busyItem = false, emitters = [];
+const inFlight = {};            // key -> {amount, at}: used here, not yet confirmed by the sheet
+const trayEl = $("#tray"), trayItems = $("#trayItems");
+function renderItems(newKeys = []) {
+  trayItems.textContent = "";
+  items.forEach(it => {
+    const info = ITEM_INFO[it.kind] || ITEM_INFO.fert;
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "item" + (newKeys.includes(it.key) ? " new" : "");
+    b.innerHTML = info.art.replace("<svg", '<svg class="item-art"');
+    const t = document.createElement("span");
+    const sm = document.createElement("small"); sm.textContent = info.use;
+    const bb = document.createElement("b"); bb.textContent = "+" + fmtH(it.amount);
+    t.append(sm, bb); b.append(t);
+    b.setAttribute("aria-label", info.use + "، يزيد الطول " + fmtH(it.amount));
+    b.addEventListener("click", () => useItem(it));
+    trayItems.append(b);
+  });
+  trayEl.hidden = items.length === 0;
+}
+function syncItems(list) {
+  const keys = new Set(list.map(i => i.key));
+  Object.keys(inFlight).forEach(k => {
+    if (!keys.has(k)) delete inFlight[k];                                   // the sheet counted it
+    else if (Date.now() - inFlight[k].at > 15000) { inFlight[k].at = Date.now(); sendUse(k); }  // resend a lost use
+  });
+  const fresh = list.filter(i => !inFlight[i.key]);
+  const added = fresh.filter(i => !items.some(x => x.key === i.key));
+  items = fresh;
+  renderItems(added.map(i => i.key));
+  if (added.length) {
+    const info = ITEM_INFO[added[0].kind] || ITEM_INFO.fert;
+    toast("هدية من المعلّم!", info.name + " +" + fmtH(added[0].amount) + "، اضغطوا عليها", 3600);
   }
+}
+function sendUse(key) {
+  if (!CONFIG.reportUrl) return;
+  try {
+    fetch(CONFIG.reportUrl, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ type: "useItem", id: deviceId, gameId: state.gameId, key }), keepalive: true }).catch(() => {});
+  } catch (e) {}
+}
+function useItem(it) {
+  if (busyItem) return;
+  if (!canWater()) { pausedToast(); return; }
+  busyItem = true;
+  items = items.filter(x => x.key !== it.key); renderItems();
+  inFlight[it.key] = { amount: it.amount, at: Date.now() };
+  sendUse(it.key);
+  state.adj += it.amount; hold += it.amount; save(true);
+  playItem(it.kind, () => {
+    hold = Math.max(0, hold - it.amount);
+    growFx(it.amount, (ITEM_INFO[it.kind] || ITEM_INFO.fert).name + "! نمت النبتة");
+    busyItem = false;
+  });
+}
+
+function plantBox() {
+  const p = plantG.getBoundingClientRect(), g = garden.getBoundingClientRect();
+  return { l: p.left - g.left, r: p.right - g.left, t: p.top - g.top, b: p.bottom - g.top, cx: (p.left + p.right) / 2 - g.left };
+}
+function fxEl(html, x, y, cls, ms) {
+  const e = document.createElement("div");
+  e.className = "fx-item " + cls; e.innerHTML = html;
+  e.style.left = x + "px"; e.style.top = y + "px";
+  garden.appendChild(e);
+  setTimeout(() => e.remove(), ms);
+}
+function playItem(kind, done) {
+  const now = performance.now();
+  if (kind === "rain") {
+    const pb = plantBox(), w = Math.max(160, Math.min(GW * .6, soil.r - soil.l));
+    const cy = Math.max(70, Math.min(pb.t, soil.cy - 150) - 40);
+    fxEl(ITEM_INFO.rain.art, soil.cx, cy, "cloud", 2600);
+    emitters.push({ start: now + 350, until: now + 2000, rate: 110, acc: 0,
+      make: () => ({ t: "rain", x: soil.cx + (Math.random() - .5) * w * .75, y: cy + 30, vx: -15, vy: 260 + Math.random() * 120, life: 1 }) });
+  } else {
+    const x = soil.cx + 40, y = soil.cy - 150;
+    fxEl(ITEM_INFO.fert.art, x, y, "sack", 2400);
+    emitters.push({ start: now + 750, until: now + 1800, rate: 80, acc: 0,
+      make: () => ({ t: "grain", x: x - 38 + (Math.random() - .5) * 12, y: y - 14, vx: -40 + Math.random() * 50, vy: 10 + Math.random() * 40, life: 1, c: Math.random() < .35 ? "#9bd16a" : "#6b4a2a" }) });
+  }
+  setTimeout(done, 2100);
+}
+function floatLabel(text, dir) {
+  const pb = plantBox(), e = document.createElement("div");
+  e.className = "float " + dir; e.textContent = text;
+  e.style.left = Math.max(80, Math.min(GW - 80, pb.cx)) + "px";
+  e.style.top = Math.max(120, Math.min(soil.cy - 60, pb.t + 40)) + "px";
+  garden.appendChild(e);
+  setTimeout(() => e.remove(), 2500);
+}
+function flashHeight(dir) {
+  const h = $(".g-height");
+  h.classList.remove("up", "down"); void h.offsetWidth; h.classList.add(dir);
+  setTimeout(() => h.classList.remove(dir), 2100);
+}
+function growFx(d, msg) {
+  popG.classList.remove("pop", "wilt"); void popG.getBoundingClientRect(); popG.classList.add("pop");
+  burst();
+  floatLabel("+" + fmtH(d), "up"); flashHeight("up");
+  toast(msg, "+" + fmtH(d), 3200);
+}
+function cutFx(d) {
+  popG.classList.remove("pop", "wilt"); void popG.getBoundingClientRect(); popG.classList.add("wilt");
+  const sw = $("#stageWrap"); sw.classList.remove("wilt"); void sw.offsetWidth; sw.classList.add("wilt");
+  setTimeout(() => sw.classList.remove("wilt"), 1700);
+  const pb = plantBox(), now = performance.now(), colors = ["#7cc35a", "#c9a640", "#a8db6c", "#b8862e"];
+  emitters.push({ start: now, until: now + 1500, rate: curStage >= 5 ? 28 : 8, acc: 0,
+    make: () => ({ t: "leaf", x: pb.l + Math.random() * (pb.r - pb.l), y: pb.t + Math.random() * (pb.b - pb.t) * .6,
+      vx: (Math.random() - .5) * 40, vy: 45 + Math.random() * 45, rot: Math.random() * 6, vr: (Math.random() - .5) * 5, life: 1,
+      c: colors[Math.floor(Math.random() * colors.length)] }) });
+  floatLabel("−" + fmtH(d), "down"); flashHeight("down");
+  toast("قرار من المعلّم", "نقص طول النبتة " + fmtH(d), 3400);
 }
 
 let lastReport = 0;
