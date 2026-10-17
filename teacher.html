@@ -164,6 +164,11 @@ h1{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(28px,5v
     <button class="btn stop" type="button" id="btnEnd">أنهِ الجولة</button>
     <button class="btn end" type="button" id="btnOver">أنهِ اللعبة وأظهر النتائج</button>
     <button class="btn ghost" type="button" id="btnNew">لعبة جديدة</button>
+    <div class="amt" role="group" aria-label="نوع الهدية">
+      <span>نوع الهدية:</span>
+      <button type="button" data-kind="fert" aria-pressed="true">سماد</button>
+      <button type="button" data-kind="rain" aria-pressed="false">غيمة مطر</button>
+    </div>
     <div class="amt" role="group" aria-label="مقدار التعزيز أو التقليل">
       <span>مقدار التعزيز أو التقليل:</span>
       <button type="button" data-amt="10" aria-pressed="false">١٠ سم</button>
@@ -230,10 +235,17 @@ const fmtD = d => (d > 0 ? "+" : "−") + fmtH(Math.abs(d));
 const heightOf = r => typeof r.height === "number" ? r.height : 0;
 // a round axis maximum just above the tallest plant
 const niceMax = m => [10, 20, 50, 100, 200, 300, 400, 500, 600, 800, 1000, 1500, 2000, 3000, 5000].find(x => x >= m * 1.05) || Math.ceil(m / 1000) * 1000;
-let AMT = 25;
-document.querySelectorAll(".amt button").forEach(b => b.addEventListener("click", () => {
+let AMT = 25, KIND = "fert";
+const KIND_NAME = { fert: "سماد", rain: "غيمة مطر" };
+document.querySelectorAll(".amt button[data-amt]").forEach(b => b.addEventListener("click", () => {
   AMT = Number(b.dataset.amt);
-  document.querySelectorAll(".amt button").forEach(x => x.setAttribute("aria-pressed", x === b));
+  document.querySelectorAll(".amt button[data-amt]").forEach(x => x.setAttribute("aria-pressed", x === b));
+  renderCards(lastRows);
+}));
+document.querySelectorAll(".amt button[data-kind]").forEach(b => b.addEventListener("click", () => {
+  KIND = b.dataset.kind;
+  document.querySelectorAll(".amt button[data-kind]").forEach(x => x.setAttribute("aria-pressed", x === b));
+  renderCards(lastRows);
 }));
 const withAction = a => URL_ + (URL_.includes("?") ? "&" : "?") + "action=" + a;
 
@@ -274,12 +286,13 @@ function renderCards(rows) {
     foot.append(el("span", null, `المحطات: ${toAr(r.stations)} من ${toAr(TOTAL)}`), el("span", null, ago(r.updated)));
     card.append(top, height);
     if (r.adj) card.append(el("div", "t-adj", "تعديل المعلّم: " + fmtD(r.adj)));
+    if (r.items) card.append(el("div", "t-adj", `هدايا لم يستخدمها الفريق بعد: ${toAr(r.items)}`));
     card.append(stage, bar, foot);
     if (hasRounds) {
       const acts = el("div", "t-acts");
-      const up = el("button", "t-up", "تعزيز +" + fmtH(AMT)), down = el("button", "t-down", "تقليل −" + fmtH(AMT));
+      const up = el("button", "t-up", `أعطِ ${KIND_NAME[KIND]} +${fmtH(AMT)}`), down = el("button", "t-down", "تقليل −" + fmtH(AMT));
       up.type = down.type = "button";
-      up.addEventListener("click", () => adjust(r, AMT, up));
+      up.addEventListener("click", () => { up.disabled = true; control("give", { id: r.id, delta: AMT, kind: KIND }); });
       down.addEventListener("click", () => adjust(r, -AMT, down));
       acts.append(up, down);
       card.append(acts);
