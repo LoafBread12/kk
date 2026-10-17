@@ -8,8 +8,8 @@
 const TEACHER_PIN = "1234";
 
 const SHEETS = {
-  progress: { name: "التقدم", headers: ["الجهاز", "الفريق", "المرحلة", "اسم المرحلة", "المحطات المفتوحة", "انتهى", "آخر تحديث"] },
-  log:      { name: "السجل",  headers: ["الوقت", "الجولة", "الجهاز", "الفريق", "المرحلة", "المحطات المفتوحة", "انتهى"] },
+  progress: { name: "التقدم", headers: ["الجهاز", "الفريق", "المرحلة", "اسم المرحلة", "المحطات المفتوحة", "انتهى", "آخر تحديث", "النمو بالسقي (سم)", "تعديل المعلّم (سم)", "الطول (سم)"] },
+  log:      { name: "السجل",  headers: ["الوقت", "الجولة", "الجهاز", "الفريق", "المرحلة", "المحطات المفتوحة", "انتهى", "الطول (سم)"] },
   rounds:   { name: "الجولات", headers: ["الجولة", "البداية", "النهاية"] }
 };
 
@@ -22,9 +22,17 @@ function sheet_(key) {
     sh.appendRow(def.headers);
     sh.setFrozenRows(1);
     sh.setRightToLeft(true);
+  } else if (sh.getRange(1, def.headers.length).getValue() !== def.headers[def.headers.length - 1]) {
+    sh.getRange(1, 1, 1, def.headers.length).setValues([def.headers]);   // sheet from an older version
   }
   return sh;
 }
+
+// Height in cm where each stage begins (same table as the game).
+const HEIGHTS = [0, 5, 15, 30, 50, 80, 120, 180, 260, 400];
+const STAGE_NAMES = ["بذرة", "تنتفخ البذرة", "الجُذير", "النُّبَيتة", "الفلقتان", "الأوراق", "الشتلة", "الشجيرة", "الإزهار", "الإثمار"];
+function stageOf_(h) { let i = 0; while (i < 9 && h >= HEIGHTS[i + 1]) i++; return i; }
+const round1_ = n => Math.round(n * 10) / 10;
 function body_(key) {
   const sh = sheet_(key), n = sh.getLastRow() - 1;
   return n > 0 ? sh.getRange(2, 1, n, SHEETS[key].headers.length).getValues() : [];
@@ -67,18 +75,37 @@ function report_(d) {
   const st = state_();
   if (d.gameId && d.gameId !== st.gameId) return out_({ ignored: true, state: st });
   const now = new Date();
-  const stage = Math.max(1, Math.min(10, Number(d.stage) || 1));
   const stations = Math.max(0, Math.min(99, Number(d.stations) || 0));
   const team = clean_(d.team, 30);
   const done = d.done ? "نعم" : "لا";
-  const row = [id, team, stage, clean_(d.stageName, 30), stations, done, now];
+  const growth = round1_(Math.max(0, Math.min(1000, Number(d.growth) || 0)));
   const progress = sheet_("progress");
-  const ids = body_("progress").map(r => String(r[0]));
-  const i = ids.indexOf(id);
+  const body = body_("progress");
+  const i = body.findIndex(r => String(r[0]) === id);
+  const adj = i >= 0 ? Number(body[i][8]) || 0 : 0;
+  const height = round1_(Math.max(0, growth + adj));
+  const stage = stageOf_(height);
+  const row = [id, team, stage + 1, STAGE_NAMES[stage], stations, done, now, growth, adj, height];
   if (i >= 0) progress.getRange(i + 2, 1, 1, row.length).setValues([row]);
   else progress.appendRow(row);
-  sheet_("log").appendRow([now, st.round, id, team, stage, stations, done]);
+  sheet_("log").appendRow([now, st.round, id, team, stage + 1, stations, done, height]);
   return out_({ ok: true, state: st });
+}
+
+// The teacher adds to (delta > 0) or takes from (delta < 0) one team's height.
+function adjust_(d, st) {
+  const id = clean_(d.id, 40);
+  const delta = Math.max(-1000, Math.min(1000, Number(d.delta) || 0));
+  const progress = sheet_("progress");
+  const body = body_("progress");
+  const i = body.findIndex(r => String(r[0]) === id);
+  if (i < 0 || !delta) return out_({ error: "bad_team" });
+  const r = body[i], now = new Date();
+  const growth = Number(r[7]) || 0, adj = round1_((Number(r[8]) || 0) + delta);
+  const height = round1_(Math.max(0, growth + adj)), stage = stageOf_(height);
+  progress.getRange(i + 2, 1, 1, 10).setValues([[r[0], r[1], stage + 1, STAGE_NAMES[stage], r[4], r[5], now, growth, adj, height]]);
+  sheet_("log").appendRow([now, st.round, r[0], r[1], stage + 1, r[4], r[5], height]);
+  return out_({ ok: true, state: state_() });
 }
 
 function control_(d) {
@@ -100,6 +127,8 @@ function control_(d) {
   } else if (d.action === "over") {
     if (st.status === "running") closeRound();
     setState_({ status: "over" });
+  } else if (d.action === "adjust") {
+    return adjust_(d, st);
   } else if (d.action === "new") {
     clear_("progress"); clear_("log"); clear_("rounds");
     setState_({ status: "idle", round: 0, gameId: "g" + Date.now().toString(36) });
@@ -123,18 +152,26 @@ function doPost(e) {
 function doGet(e) {
   const action = (e && e.parameter && e.parameter.action) || "rows";
   const st = state_();
-  if (action === "state") return out_(st);
+  if (action === "state") {
+    const id = e.parameter.id;
+    if (id) {
+      const r = body_("progress").find(x => String(x[0]) === id);
+      st.adj = r ? Number(r[8]) || 0 : 0;
+    }
+    return out_(st);
+  }
   if (action === "history") {
     const rounds = body_("rounds").map(r => ({ round: Number(r[0]), start: iso_(r[1]), end: iso_(r[2]) }));
     const log = body_("log").map(r => ({
       t: iso_(r[0]), round: Number(r[1]) || 0, id: String(r[2]), team: plain_(r[3]),
-      stage: Number(r[4]) || 1, stations: Number(r[5]) || 0, done: r[6] === "نعم"
+      stage: Number(r[4]) || 1, stations: Number(r[5]) || 0, done: r[6] === "نعم", height: Number(r[7]) || 0
     }));
     return out_({ state: st, rounds: rounds, log: log });
   }
   const rows = body_("progress").map(r => ({
     id: String(r[0]), team: plain_(r[1]), stage: Number(r[2]) || 1, stageName: String(r[3]),
-    stations: Number(r[4]) || 0, done: r[5] === "نعم", updated: iso_(r[6])
+    stations: Number(r[4]) || 0, done: r[5] === "نعم", updated: iso_(r[6]),
+    growth: Number(r[7]) || 0, adj: Number(r[8]) || 0, height: Number(r[9]) || 0
   }));
   return out_({ state: st, rows: rows });
 }

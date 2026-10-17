@@ -72,6 +72,17 @@ h1{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(28px,5v
 .t-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
 .t-name{font-family:var(--f-display);font-size:24px;line-height:1.2;min-width:0;overflow-wrap:anywhere}
 .t-rank{flex:none;font-weight:800;font-size:13px;background:rgba(58,36,20,.12);border-radius:20px;padding:0 10px}
+.t-height{font-family:var(--f-display);font-size:30px;line-height:1.1;color:var(--leaf-deep);font-variant-numeric:tabular-nums}
+.t-adj{font-size:13px;font-weight:700;color:var(--ink-soft)}
+.t-acts{display:flex;gap:6px;margin-top:2px}
+.t-acts button{flex:1;border:0;border-radius:6px;padding:6px 8px;font-weight:800;font-size:14px;cursor:pointer}
+.t-up{color:#0f2d0c;background:linear-gradient(180deg,#c9f0b0,var(--leaf) 60%,#4c9a35);box-shadow:inset 0 -2px 0 rgba(0,0,0,.2)}
+.t-down{color:#fff;background:linear-gradient(180deg,#e9735f,#c0392b 60%,#8e2a1f);box-shadow:inset 0 -2px 0 rgba(0,0,0,.2)}
+.t-acts button:disabled{opacity:.5;cursor:wait}
+.t-acts button:active:not(:disabled){transform:translateY(1px)}
+.amt{display:flex;flex-wrap:wrap;align-items:center;gap:6px;width:100%;font-weight:800;font-size:15px}
+.amt button{border:0;border-radius:20px;padding:2px 12px;font-weight:800;cursor:pointer;color:var(--ink);background:rgba(255,255,255,.12)}
+.amt button[aria-pressed="true"]{background:var(--gold);color:#3a2006}
 .t-stage{font-weight:800;font-size:16px}
 .t-stage b{color:var(--leaf-deep)}
 .bar{display:grid;grid-template-columns:repeat(10,1fr);gap:3px}
@@ -151,6 +162,13 @@ h1{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(28px,5v
     <button class="btn stop" type="button" id="btnEnd">أنهِ الجولة</button>
     <button class="btn end" type="button" id="btnOver">أنهِ اللعبة وأظهر النتائج</button>
     <button class="btn ghost" type="button" id="btnNew">لعبة جديدة</button>
+    <div class="amt" role="group" aria-label="مقدار التعزيز أو التقليل">
+      <span>مقدار التعزيز أو التقليل:</span>
+      <button type="button" data-amt="10" aria-pressed="false">١٠ سم</button>
+      <button type="button" data-amt="25" aria-pressed="true">٢٥ سم</button>
+      <button type="button" data-amt="50" aria-pressed="false">٥٠ سم</button>
+      <button type="button" data-amt="100" aria-pressed="false">١ م</button>
+    </div>
     <form class="pin" id="pinForm" hidden>
       <label for="pinInput">رمز المعلّم</label>
       <input id="pinInput" inputmode="numeric" autocomplete="off">
@@ -166,13 +184,13 @@ h1{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(28px,5v
 
   <section class="panel" id="viewChart" hidden aria-labelledby="chartTitle">
     <h2 id="chartTitle">إلى أين وصل كل فريق؟</h2>
-    <p class="sub">طول العمود = المرحلة التي وصلت إليها شجرة الفريق (من ١٠).</p>
+    <p class="sub">طول العمود = طول نبتة الفريق. الفائز صاحب النبتة الأطول.</p>
     <div class="rows" id="rows"></div>
   </section>
 
   <section class="panel" id="viewReplay" hidden aria-labelledby="rpTitle">
     <h2 id="rpTitle">نتائج اللعبة</h2>
-    <p class="sub">إعادة لتقدّم الفرق جولةً بعد جولة. طول العمود = المرحلة (من ١٠).</p>
+    <p class="sub">إعادة لنموّ نباتات الفرق جولةً بعد جولة. طول العمود = طول النبتة.</p>
     <div class="rp-head">
       <div><div class="rp-round" id="rpRound">الجولة ١</div><div class="rp-clock" id="rpClock"></div></div>
       <div class="rp-btns">
@@ -205,6 +223,16 @@ const TOTAL = (CFG.stations || []).length || 6;
 const toAr = n => String(n).replace(/\d/g, d => "٠١٢٣٤٥٦٧٨٩"[d]);
 const $ = s => document.querySelector(s);
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const fmtH = h => h < 100 ? toAr(Math.round(h)) + " سم" : toAr((h / 100).toFixed(2)).replace(".", "٫") + " م";
+const fmtD = d => (d > 0 ? "+" : "−") + fmtH(Math.abs(d));
+const heightOf = r => typeof r.height === "number" ? r.height : 0;
+// a round axis maximum just above the tallest plant
+const niceMax = m => [10, 20, 50, 100, 200, 300, 400, 500, 600, 800, 1000, 1500, 2000, 3000, 5000].find(x => x >= m * 1.05) || Math.ceil(m / 1000) * 1000;
+let AMT = 25;
+document.querySelectorAll(".amt button").forEach(b => b.addEventListener("click", () => {
+  AMT = Number(b.dataset.amt);
+  document.querySelectorAll(".amt button").forEach(x => x.setAttribute("aria-pressed", x === b));
+}));
 const withAction = a => URL_ + (URL_.includes("?") ? "&" : "?") + "action=" + a;
 
 let game = { status: "idle", round: 0, gameId: "" }, hasRounds = false, view = "cards", lastRows = [];
@@ -235,13 +263,25 @@ function renderCards(rows) {
     const card = el("article", "team" + (r.done ? " done" : ""));
     const top = el("div", "t-top");
     top.append(el("span", "t-name", r.team || "بلا اسم"), el("span", "t-rank", "#" + toAr(i + 1)));
+    const height = el("div", "t-height", fmtH(heightOf(r)));
     const stage = el("div", "t-stage", `المرحلة ${toAr(r.stage)} من ١٠، `);
     stage.append(el("b", null, r.done ? "أثمرت الشجرة" : r.stageName));
     const bar = el("div", "bar");
     for (let k = 0; k < 10; k++) bar.append(el("i", k < r.stage ? "on" : null));
     const foot = el("div", "t-foot");
     foot.append(el("span", null, `المحطات: ${toAr(r.stations)} من ${toAr(TOTAL)}`), el("span", null, ago(r.updated)));
-    card.append(top, stage, bar, foot);
+    card.append(top, height);
+    if (r.adj) card.append(el("div", "t-adj", "تعديل المعلّم: " + fmtD(r.adj)));
+    card.append(stage, bar, foot);
+    if (hasRounds) {
+      const acts = el("div", "t-acts");
+      const up = el("button", "t-up", "تعزيز +" + fmtH(AMT)), down = el("button", "t-down", "تقليل −" + fmtH(AMT));
+      up.type = down.type = "button";
+      up.addEventListener("click", () => adjust(r, AMT, up));
+      down.addEventListener("click", () => adjust(r, -AMT, down));
+      acts.append(up, down);
+      card.append(acts);
+    }
     grid.append(card);
   });
 }
@@ -250,7 +290,7 @@ function renderCards(rows) {
 const rowsEl = $("#rows"), tip = $("#tip"), lastPct = {};
 function showTip(e, r) {
   tip.textContent = "";
-  tip.append(el("b", null, r.team || "بلا اسم"), `المرحلة ${toAr(r.stage)} من ١٠: ${r.done ? "أثمرت الشجرة" : r.stageName}`, el("br"), `المحطات: ${toAr(r.stations)} من ${toAr(TOTAL)}`);
+  tip.append(el("b", null, r.team || "بلا اسم"), "الطول: " + fmtH(heightOf(r)), el("br"), `المرحلة ${toAr(r.stage)} من ١٠: ${r.done ? "أثمرت الشجرة" : r.stageName}`, el("br"), `المحطات: ${toAr(r.stations)} من ${toAr(TOTAL)}`);
   tip.hidden = false;
   const w = tip.offsetWidth, h = tip.offsetHeight;
   tip.style.left = Math.max(8, Math.min(innerWidth - w - 8, e.clientX - w / 2)) + "px";
@@ -262,17 +302,19 @@ function placeVal(val, pct, dark) {
   val.style.insetInlineEnd = inside ? `calc(${100 - pct}% + 2px)` : "auto";
   val.style.color = inside ? "#fff6e3" : dark;
 }
-function axisRow(container) {
+function axisRow(container, max) {
   const axis = el("div", "axis");
-  for (let k = 0; k <= 10; k += 2) { const t = el("span", null, toAr(k)); t.style.insetInlineStart = k * 10 + "%"; axis.append(t); }
-  container.append(el("span"), axis, el("span"), el("div", "axis-title", "المرحلة"));
+  for (let k = 0; k <= 4; k++) { const t = el("span", null, k ? fmtH(max * k / 4) : "٠"); t.style.insetInlineStart = k * 25 + "%"; axis.append(t); }
+  container.append(el("span"), axis, el("span"), el("div", "axis-title", "طول النبتة"));
 }
+let axisMax = 400;
 function renderChart(rows) {
   rowsEl.textContent = "";
+  axisMax = niceMax(Math.max(10, ...rows.map(heightOf)));
   rows.forEach(r => {
     const track = el("div", "r-track"), bar = el("div", "r-bar");
-    const pct = Math.max(0, Math.min(10, r.stage)) * 10;
-    const val = el("span", "r-val", toAr(r.stage) + (r.done ? "، أثمرت" : ""));
+    const pct = Math.min(100, heightOf(r) / axisMax * 100);
+    const val = el("span", "r-val", fmtH(heightOf(r)) + (r.done ? "، أثمرت" : ""));
     placeVal(val, pct, "var(--ink-dark)");
     track.append(bar, val);
     track.addEventListener("pointermove", e => showTip(e, r));
@@ -282,7 +324,7 @@ function renderChart(rows) {
     lastPct[r.id] = pct;
     requestAnimationFrame(() => requestAnimationFrame(() => { bar.style.width = pct + "%"; }));
   });
-  if (rows.length) axisRow(rowsEl);
+  if (rows.length) axisRow(rowsEl, axisMax);
 }
 
 /* ---------- round controls ---------- */
@@ -308,15 +350,15 @@ function renderControls() {
 let PIN = "";
 try { PIN = localStorage.getItem("bustan-pin") || ""; } catch (e) {}
 let pendingAction = null;
-async function control(action) {
-  if (!PIN) { pendingAction = action; $("#pinForm").hidden = false; $("#pinInput").focus(); return; }
+async function control(action, extra) {
+  if (!PIN) { pendingAction = [action, extra]; $("#pinForm").hidden = false; $("#pinInput").focus(); return; }
   document.querySelectorAll(".controls .btn").forEach(b => b.disabled = true);
   try {
-    const res = await fetch(URL_, { method: "POST", body: JSON.stringify({ type: "control", action, pin: PIN }) });
+    const res = await fetch(URL_, { method: "POST", body: JSON.stringify({ type: "control", action, pin: PIN, ...(extra || {}) }) });
     const j = await res.json();
     if (j.error === "bad_pin") {
       PIN = ""; try { localStorage.removeItem("bustan-pin"); } catch (e) {}
-      pendingAction = action; $("#pinForm").hidden = false; $("#pinMsg").textContent = "الرمز غير صحيح، حاول مرة أخرى."; $("#pinInput").focus();
+      pendingAction = [action, extra]; $("#pinForm").hidden = false; $("#pinMsg").textContent = "الرمز غير صحيح، حاول مرة أخرى."; $("#pinInput").focus();
     } else if (j.state) {
       $("#pinForm").hidden = true; $("#pinMsg").textContent = "";
     }
@@ -335,7 +377,7 @@ $("#pinForm").addEventListener("submit", e => {
   PIN = v; try { localStorage.setItem("bustan-pin", v); } catch (e) {}
   $("#pinInput").value = "";
   const a = pendingAction; pendingAction = null;
-  if (a) control(a);
+  if (a) control(a[0], a[1]);
 });
 // two taps for the actions that cannot be undone
 function twoTap(btn, label, confirmLabel, action) {
@@ -349,6 +391,10 @@ function twoTap(btn, label, confirmLabel, action) {
     clearTimeout(t); btn.classList.remove("arm"); btn.textContent = label;
     control(action);
   });
+}
+function adjust(r, delta, btn) {
+  btn.disabled = true;
+  control("adjust", { id: r.id, delta });
 }
 $("#btnStart").addEventListener("click", () => control("start"));
 $("#btnEnd").addEventListener("click", () => control("end"));
@@ -379,12 +425,14 @@ function buildReplay(h) {
   (h.log || []).forEach(x => {
     const tm = teams[x.id] || (teams[x.id] = { id: x.id, team: "", ev: [] });
     tm.team = x.team || tm.team;
-    tm.ev.push({ v: vOf(new Date(x.t).getTime()), stage: x.stage, done: x.done });
+    tm.ev.push({ v: vOf(new Date(x.t).getTime()), h: typeof x.height === "number" ? x.height : 0, done: x.done });
   });
   const list = Object.values(teams);
   list.forEach(tm => tm.ev.sort((a, b) => a.v - b.v));
-  const at = (tm, p) => { let s = 0, d = false; for (const e of tm.ev) { if (e.v > p) break; s = Math.max(s, e.stage); d = d || e.done; } return { s, d }; };
-  return { rounds, total, teams: list, at, duration: Math.min(36000, 9000 + rounds.length * 7000), p: 0 };
+  // height at replay time p: the latest report (a teacher cut can lower it)
+  const at = (tm, p) => { let s = 0, d = false; for (const e of tm.ev) { if (e.v > p) break; s = e.h; d = d || e.done; } return { s, d }; };
+  const max = niceMax(Math.max(10, ...list.flatMap(tm => tm.ev.map(e => e.h))));
+  return { rounds, total, teams: list, at, max, duration: Math.min(36000, 9000 + rounds.length * 7000), p: 0 };
 }
 
 function drawTimeline() {
@@ -424,9 +472,9 @@ function frame(p) {
     if (tm.rank !== i) { tm.row.style.transform = `translateY(${i * ROW_H}px)`; tm.rank = i; }
     if (tm.shown !== x.s || tm.doneShown !== x.d) {
       tm.shown = x.s; tm.doneShown = x.d;
-      const pct = x.s * 10;
+      const pct = Math.min(100, x.s / rp.max * 100);
       tm.bar.style.width = pct + "%";
-      tm.val.textContent = x.s ? toAr(x.s) + (x.d ? "، أثمرت" : "") : "";
+      tm.val.textContent = x.s ? fmtH(x.s) + (x.d ? "، أثمرت" : "") : "";
       placeVal(tm.val, pct, "var(--ink-dark)");
       tm.row.classList.toggle("done", x.d);
     }
@@ -451,13 +499,13 @@ function drawSummary() {
     const tr = el("tr"); tr.append(el("td", null, tm.team || "بلا اسم"));
     let prev = 0;
     rp.rounds.forEach(r => {
-      const s = rp.at(tm, r.v1).s;
-      tr.append(el("td", s > prev ? "up" : null, s ? toAr(s) + (s > prev && prev ? ` (+${toAr(s - prev)})` : "") : "–"));
-      prev = Math.max(prev, s);
+      const s = rp.at(tm, r.v1).s, d = Math.round(s - prev);
+      tr.append(el("td", d > 0 ? "up" : null, s ? fmtH(s) + (d && prev ? ` (${fmtD(d)})` : "") : "–"));
+      prev = s;
     });
     table.append(tr);
   });
-  box.append(el("p", "sub", "المرحلة التي وصل إليها كل فريق في نهاية كل جولة، وبين القوسين ما زاده في تلك الجولة."), table);
+  box.append(el("p", "sub", "طول نبتة كل فريق في نهاية كل جولة، وبين القوسين ما زاد أو نقص في تلك الجولة."), table);
   box.hidden = false;
 }
 
@@ -504,7 +552,7 @@ async function load() {
     let rows;
     if (Array.isArray(data)) { rows = data; hasRounds = false; }            // older script without rounds
     else { rows = data.rows || []; game = data.state || game; hasRounds = true; }
-    rows.sort((a, b) => (b.done - a.done) || (b.stage - a.stage) || (b.stations - a.stations) || String(a.updated).localeCompare(String(b.updated)));
+    rows.sort((a, b) => (heightOf(b) - heightOf(a)) || (b.stage - a.stage) || (b.stations - a.stations) || String(a.updated).localeCompare(String(b.updated)));
     lastRows = rows;
     renderCards(rows); renderChart(rows); renderControls();
     $("#countTeams").textContent = "الفرق: " + toAr(rows.length);
