@@ -11,3 +11,12 @@
 ## لعبة بستان البذرة
 الملف: `index.html` في جذر المستودع، فيفتح على رابط GitHub Pages مباشرة.
 أسماء المحطات وكلمات السر في أعلى الكود داخل `CONFIG`.
+
+## متابعة تقدّم الفرق (لوحة المعلّم)
+1. أنشئ جدول Google Sheets جديدًا، ثم Extensions ← Apps Script.
+2. الصق محتوى `google-apps-script.gs` واحفظ.
+3. Deploy ← New deployment ← النوع Web app، Execute as: Me، Who has access: Anyone ← Deploy، ووافق على الصلاحيات.
+4. انسخ الرابط الذي ينتهي بـ `/exec` وضعه في `reportUrl` داخل `config.js`.
+5. افتح `teacher.html` لترى تقدّم كل فريق (يتحدّث كل ١٠ ثوانٍ)، أو افتح جدول Google نفسه.
+
+أسماء المحطات وكلمات السر أصبحت أيضًا في `config.js`.

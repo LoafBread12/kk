@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>لوحة المعلّم</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@400;600;800&family=Lalezar&display=swap">
+<style>
+/* Layout: one wooden header, then a grid of team cards ordered by how far each team has grown. */
+:root{
+  --wood-900:#2e190c; --wood-700:#5a331a; --wood-500:#8a5530; --wood-300:#c08a52;
+  --sky-900:#0f3349; --sky-700:#1c5878;
+  --parch:#f2e6c9; --parch-2:#dcc69b; --ink:#fff6e3; --ink-dark:#3a2414; --ink-mut:#c9dde8;
+  --leaf:#6dbb4f; --leaf-deep:#2f6b2a; --gold:#f4c34f; --water:#86d6ff;
+  --f-display:"Lalezar","Baloo Bhaijaan 2",Tahoma,sans-serif;
+  --f-body:"Baloo Bhaijaan 2",Tahoma,"Segoe UI",sans-serif;
+  --grain:repeating-linear-gradient(90deg,rgba(0,0,0,.13) 0 2px,transparent 2px 9px,rgba(255,255,255,.05) 9px 10px,transparent 10px 19px);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;font-family:var(--f-body);color:var(--ink);line-height:1.5;
+  background:repeating-linear-gradient(90deg,rgba(255,255,255,.03) 0 3px,transparent 3px 28px),linear-gradient(180deg,var(--sky-700),var(--sky-900));
+  background-color:var(--sky-900);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 32px}
+.wrap{max-width:1100px;margin:0 auto;display:grid;gap:16px}
+header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:12px 18px;border-radius:10px;
+  background:var(--grain),linear-gradient(180deg,var(--wood-300),var(--wood-500) 50%,var(--wood-700));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 0 0 3px var(--wood-900),0 8px 20px rgba(0,0,0,.35)}
+h1{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(28px,5vw,40px);line-height:1.1;text-shadow:0 2px 0 rgba(0,0,0,.4)}
+.meta{display:flex;flex-wrap:wrap;gap:8px;font-weight:800;font-size:15px}
+.chip{background:rgba(0,0,0,.3);border-radius:20px;padding:2px 12px;font-variant-numeric:tabular-nums}
+.status{font-size:14px;color:var(--ink-mut);margin:0}
+.status.err{color:#ffb4a3}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.team{border-radius:8px;padding:12px 14px;display:grid;gap:6px;color:var(--ink-dark);
+  background:linear-gradient(180deg,var(--parch),var(--parch-2));box-shadow:0 0 0 2px var(--wood-700),0 4px 0 rgba(0,0,0,.25)}
+.team.done{background:linear-gradient(180deg,#f7e3a0,#e2bd5c)}
+.t-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.t-name{font-family:var(--f-display);font-size:24px;line-height:1.2;min-width:0;overflow-wrap:anywhere}
+.t-rank{flex:none;font-weight:800;font-size:13px;background:rgba(58,36,20,.12);border-radius:20px;padding:0 10px}
+.t-stage{font-weight:800;font-size:16px}
+.t-stage b{color:var(--leaf-deep)}
+.bar{display:grid;grid-template-columns:repeat(10,1fr);gap:3px}
+.bar i{height:12px;border-radius:3px;background:rgba(58,36,20,.15)}
+.bar i.on{background:var(--leaf)}
+.team.done .bar i.on{background:#c0392b}
+.t-foot{display:flex;justify-content:space-between;gap:8px;font-size:13px;font-weight:600;color:#6e4e30}
+.empty,.setup{border-radius:10px;padding:18px 20px;background:rgba(0,0,0,.25);font-size:16px}
+.setup h2{margin:0 0 8px;font-family:var(--f-display);font-weight:400;font-size:26px}
+.setup ol{margin:0;padding-inline-start:22px;display:grid;gap:6px}
+.setup code{background:rgba(0,0,0,.35);padding:0 6px;border-radius:4px;direction:ltr;display:inline-block}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>لوحة المعلّم</h1>
+    <div class="meta"><span class="chip" id="countTeams">الفرق: ٠</span><span class="chip" id="countDone">أنهوا: ٠</span></div>
+  </header>
+  <p class="status" id="status">يتحدّث كل ١٠ ثوانٍ.</p>
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty" hidden>لم يبدأ أي فريق بعد. ستظهر الفرق هنا عندما تكتب اسمها في اللعبة.</div>
+  <div class="setup" id="setup" hidden>
+    <h2>لم يُربط جدول التقدّم بعد</h2>
+    <ol>
+      <li>أنشئ جدول Google Sheets جديدًا، ثم من القائمة: Extensions ثم Apps Script.</li>
+      <li>الصق محتوى الملف <code>google-apps-script.gs</code> واحفظ.</li>
+      <li>Deploy ثم New deployment، النوع Web app، و Execute as: Me، و Who has access: Anyone، ثم Deploy.</li>
+      <li>انسخ الرابط الذي ينتهي بـ <code>/exec</code> وضعه في <code>reportUrl</code> داخل الملف <code>config.js</code>.</li>
+    </ol>
+  </div>
+</div>
+<script src="config.js"></script>
+<script>
+const CFG = window.GAME_CONFIG || {};
+const TOTAL = (CFG.stations || []).length || 6;
+const toAr = n => String(n).replace(/\d/g, d => "٠١٢٣٤٥٦٧٨٩"[d]);
+const $ = s => document.querySelector(s);
+
+function ago(iso) {
+  const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+  if (!isFinite(s)) return "";
+  if (s < 60) return "الآن";
+  if (s < 3600) return "قبل " + toAr(Math.floor(s / 60)) + " د";
+  return "قبل " + toAr(Math.floor(s / 3600)) + " س";
+}
+
+function render(rows) {
+  rows.sort((a, b) => (b.done - a.done) || (b.stage - a.stage) || (b.stations - a.stations) || a.updated.localeCompare(b.updated));
+  const grid = $("#grid"); grid.textContent = "";
+  rows.forEach((r, i) => {
+    const card = document.createElement("article");
+    card.className = "team" + (r.done ? " done" : "");
+    const top = document.createElement("div"); top.className = "t-top";
+    const name = document.createElement("span"); name.className = "t-name"; name.textContent = r.team || "بلا اسم";
+    const rank = document.createElement("span"); rank.className = "t-rank"; rank.textContent = "#" + toAr(i + 1);
+    top.append(name, rank);
+    const stage = document.createElement("div"); stage.className = "t-stage";
+    stage.textContent = `المرحلة ${toAr(r.stage)} من ١٠ · `;
+    const b = document.createElement("b"); b.textContent = r.done ? "أثمرت الشجرة" : r.stageName; stage.append(b);
+    const bar = document.createElement("div"); bar.className = "bar";
+    for (let k = 0; k < 10; k++) { const s = document.createElement("i"); if (k < r.stage) s.className = "on"; bar.append(s); }
+    const foot = document.createElement("div"); foot.className = "t-foot";
+    const st = document.createElement("span"); st.textContent = `المحطات: ${toAr(r.stations)} من ${toAr(TOTAL)}`;
+    const up = document.createElement("span"); up.textContent = ago(r.updated);
+    foot.append(st, up);
+    card.append(top, stage, bar, foot);
+    grid.append(card);
+  });
+  $("#countTeams").textContent = "الفرق: " + toAr(rows.length);
+  $("#countDone").textContent = "أنهوا: " + toAr(rows.filter(r => r.done).length);
+  $("#empty").hidden = rows.length > 0;
+}
+
+async function load() {
+  try {
+    const res = await fetch(CFG.reportUrl, { cache: "no-store" });
+    const rows = await res.json();
+    render(Array.isArray(rows) ? rows : []);
+    $("#status").className = "status";
+    $("#status").textContent = "آخر تحديث: " + new Date().toLocaleTimeString("ar") + " · يتحدّث كل ١٠ ثوانٍ.";
+  } catch (e) {
+    $("#status").className = "status err";
+    $("#status").textContent = "تعذّر جلب التقدّم. تأكّد من رابط reportUrl ومن أن النشر متاح لـ Anyone.";
+  }
+}
+
+if (!CFG.reportUrl) {
+  $("#setup").hidden = false;
+  $("#status").hidden = true;
+} else {
+  load();
+  setInterval(load, 10000);
+}
+</script>
+</body>
+</html>
