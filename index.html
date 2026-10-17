@@ -131,6 +131,8 @@ button,input{font:inherit;color:inherit}
 .toast small{display:block;font-size:13px;color:#e8d6b4;line-height:1.2}
 .toast strong{display:block;font-family:var(--f-display);font-weight:400;font-size:21px;line-height:1.25}
 
+.g-height{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(24px,3.6cqw,32px);line-height:1.1;color:var(--gold);text-shadow:0 2px 0 rgba(0,0,0,.45);font-variant-numeric:tabular-nums}
+.g-height small{font-family:var(--f-body);font-weight:800;font-size:14px;color:var(--ink);margin-inline-end:6px;text-shadow:none}
 .g-team{margin:0;font-weight:800;font-size:15px;color:#dff4ff;background:rgba(0,0,0,.3);border-radius:20px;padding:0 12px}
 .pause{position:absolute;inset:0;z-index:7;display:grid;place-items:center;padding:16px;background:rgba(8,24,36,.45);pointer-events:none}
 .pause-card{width:min(100%,400px);display:grid;gap:6px;padding:16px 20px;border-radius:10px;text-align:center;
@@ -273,6 +275,7 @@ button,input{font:inherit;color:inherit}
       <header class="plaque">
         <h1 class="g-title">بستان البذرة</h1>
         <p class="g-team" id="teamLabel" hidden></p>
+        <p class="g-height"><small>طول النبتة</small><span id="heightTxt">٠ سم</span></p>
         <p class="g-round" id="roundLabel" hidden></p>
         <p class="g-stage"><span id="stageNum">المرحلة ١ من ١٠</span>، <b id="stageName">بذرة</b></p>
         <ol class="track" id="track"></ol>
@@ -381,7 +384,7 @@ const RATE = WPS / CONFIG.pourSeconds;               // growth per second of aim
 
 /* ---------- state ---------- */
 const KEY = "bustan-albithra-v1";
-let state = { unlocked: [], water: 0, progress: 0, team: "", gameId: "" };
+let state = { unlocked: [], water: 0, progress: 0, team: "", gameId: "", adj: 0 };
 try {
   const s = JSON.parse(localStorage.getItem(KEY));
   if (s && Array.isArray(s.unlocked)) {
@@ -390,6 +393,7 @@ try {
     state.unlocked = s.unlocked.filter(id => CONFIG.stations.some(x => x.id === id));
     state.water = Math.max(0, +s.water || 0);
     state.progress = Math.min(MAX, Math.max(0, +s.progress || 0));
+    state.adj = Number(s.adj) || 0;
   }
 } catch (e) {}
 let lastSave = 0;
@@ -613,7 +617,13 @@ function nextToast() {
 }
 
 /* ---------- plant + HUD ---------- */
-const stageOf = p => Math.min(MAX, Math.floor(p + 1e-6));
+// Height in cm where each stage begins. Watering grows the plant along this curve up to 4 m;
+// the teacher's boosts and cuts (state.adj) add to or take from that height.
+const HEIGHTS = [0, 5, 15, 30, 50, 80, 120, 180, 260, 400];
+const growthCm = p => { const i = Math.min(MAX - 1, Math.floor(p)); return HEIGHTS[i] + (HEIGHTS[i + 1] - HEIGHTS[i]) * (p - i); };
+const heightCm = () => Math.max(0, growthCm(state.progress) + state.adj);
+const stageOfH = h => { let i = 0; while (i < MAX && h >= HEIGHTS[i + 1] - 1e-6) i++; return i; };
+const fmtH = h => h < 100 ? toAr(Math.round(h)) + " سم" : toAr((h / 100).toFixed(2)).replace(".", "٫") + " م";
 let curStage = -1, complete = false;
 function setStage(i, animate) {
   curStage = i;
@@ -635,9 +645,14 @@ function setStage(i, animate) {
 }
 popG.addEventListener("animationend", () => popG.classList.remove("pop"));
 
+let shownH = "";
 function updatePlantScale() {
-  const frac = curStage >= MAX ? 1 : state.progress - curStage;
-  const s = (curStage >= 7 ? .93 : .88) + (curStage >= 7 ? .07 : .12) * Math.min(1, frac);
+  const h = heightCm();
+  const frac = curStage >= MAX ? 1 : Math.max(0, (h - HEIGHTS[curStage]) / (HEIGHTS[curStage + 1] - HEIGHTS[curStage]));
+  let s = (curStage >= 7 ? .93 : .88) + (curStage >= 7 ? .07 : .12) * Math.min(1, frac);
+  if (curStage >= MAX) s = 1 + Math.min(.12, (h - HEIGHTS[MAX]) / 2500);
+  const txt = fmtH(h);
+  if (txt !== shownH) { $("#heightTxt").textContent = txt; shownH = txt; }
   plantG.setAttribute("transform", `translate(200 352) scale(${s.toFixed(3)}) translate(-200 -352)`);
   $("#nextBar").style.width = (curStage >= MAX ? 100 : Math.min(1, frac) * 100) + "%";
 }
@@ -706,7 +721,7 @@ garden.addEventListener("pointerdown", e => {
   e.preventDefault();
 });
 garden.addEventListener("pointermove", e => { if (dragging) setPtr(e); });
-const endDrag = () => { dragging = false; garden.classList.remove("pouring"); save(true); };
+const endDrag = () => { if (dragging) report(); dragging = false; garden.classList.remove("pouring"); save(true); };
 garden.addEventListener("pointerup", endDrag);
 garden.addEventListener("pointercancel", endDrag);
 canEl.addEventListener("keydown", e => {
@@ -781,8 +796,9 @@ function tick(now) {
       state.water -= d; state.progress += d;
       if (state.water < 1e-4) { state.water = 0; toast("انتهى ماء الإبريق", state.progress >= MAX - 1e-4 ? "أحسنتم!" : "افتح محطة أخرى"); }
       if (state.progress >= MAX - 1e-4) state.progress = MAX;
-      const st = stageOf(state.progress);
-      if (st !== curStage) setStage(st, true);
+      const st = stageOfH(heightCm());
+      if (st !== curStage) setStage(st, st > curStage);
+      if (performance.now() - lastReport > 4000) report();
       if (state.progress >= MAX && !complete) finish(true);
       save();
     }
@@ -857,7 +873,7 @@ resetBtn.addEventListener("click", () => {
   }
   clearTimeout(resetTimer);
   resetBtn.classList.remove("arm"); resetBtn.textContent = "بدء من جديد";
-  state = { unlocked: [], water: 0, progress: 0, team: "", gameId: state.gameId };
+  state = { unlocked: [], water: 0, progress: 0, team: "", gameId: state.gameId, adj: state.adj };
   complete = false; parts = []; wet = 0;
   save(true);
   if (openId) toggleStation(openId);
@@ -916,13 +932,13 @@ async function pollRound() {
   if (!CONFIG.reportUrl) return;
   let s;
   try {
-    const res = await fetch(CONFIG.reportUrl + (CONFIG.reportUrl.includes("?") ? "&" : "?") + "action=state", { cache: "no-store" });
+    const res = await fetch(CONFIG.reportUrl + (CONFIG.reportUrl.includes("?") ? "&" : "?") + "action=state&id=" + encodeURIComponent(deviceId), { cache: "no-store" });
     s = await res.json();
   } catch (e) { return; }
   if (!s || Array.isArray(s) || !s.status) { round.status = "running"; renderRound(); return; }  // older script without rounds
   if (s.gameId && state.gameId && s.gameId !== state.gameId) {
     // the teacher started a new game: start this device over
-    state = { unlocked: [], water: 0, progress: 0, team: "", gameId: s.gameId };
+    state = { unlocked: [], water: 0, progress: 0, team: "", gameId: s.gameId, adj: 0 };
     complete = false; parts = []; wet = 0;
     save(true);
     if (openId) toggleStation(openId);
@@ -931,6 +947,7 @@ async function pollRound() {
   } else if (s.gameId && !state.gameId) {
     state.gameId = s.gameId; save(true);
   }
+  if (typeof s.adj === "number" && s.adj !== state.adj) applyAdj(s.adj);
   const was = round.status;
   round.status = s.status; round.n = Number(s.round) || 0;
   renderRound();
@@ -939,11 +956,29 @@ async function pollRound() {
   }
 }
 
+// the teacher gave this team a boost or a cut
+function applyAdj(adj) {
+  const delta = adj - state.adj;
+  state.adj = adj; save(true);
+  const st = stageOfH(heightCm());
+  if (st !== curStage) setStage(st, false);
+  if (delta > 0) {
+    popG.classList.remove("pop"); void popG.getBoundingClientRect(); popG.classList.add("pop");
+    burst();
+    toast("تعزيز من المعلّم!", "زاد طول النبتة " + fmtH(delta), 3200);
+  } else if (delta < 0) {
+    toast("قرار من المعلّم", "نقص طول النبتة " + fmtH(-delta), 3200);
+  }
+}
+
+let lastReport = 0;
 function report() {
   if (!CONFIG.reportUrl || !state.team) return;
-  const st = stageOf(state.progress);
+  lastReport = performance.now();
+  const st = stageOfH(heightCm());
   const body = JSON.stringify({
     id: deviceId, gameId: state.gameId, team: state.team, stage: st + 1, stageName: STAGES[st].name,
+    growth: Math.round(growthCm(state.progress) * 10) / 10,
     stations: state.unlocked.length, totalStations: CONFIG.stations.length, done: state.progress >= MAX
   });
   try {
@@ -958,7 +993,7 @@ pollRound();
 setInterval(pollRound, 5000);
 report();
 renderStations();
-setStage(stageOf(state.progress), false);
+setStage(stageOfH(heightCm()), false);
 if (state.progress >= MAX) finish(false);
 requestAnimationFrame(t => { last = t; measure(); requestAnimationFrame(tick); });
 </script>
