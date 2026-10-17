@@ -1,7 +1,7 @@
 // إعدادات لعبة بستان البذرة — تقرؤها صفحة اللعبة وصفحة المعلّم.
 window.GAME_CONFIG = {
   // ضع هنا رابط Google Apps Script بعد نشره (ينتهي بـ /exec). اتركه فارغًا لإيقاف الإرسال.
-  reportUrl: "",
+  reportUrl: "https://script.google.com/macros/s/AKfycbzXtAE-kksow9uUfr5THfL75AGyrGLdvZVJNPjBWpZ6K7XcSJjVaysUj9MpOiRAJbCl/exec",
 
   // أسماء المحطات وكلمات السر
   stations: [
