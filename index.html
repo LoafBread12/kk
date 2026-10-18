@@ -236,6 +236,12 @@ button,input{font:inherit;color:inherit}
 .st-msg.ok{color:#b8f39a}
 .st-donemsg{display:none;font-size:14px;font-weight:600}
 .station.done{background:linear-gradient(180deg,#e3f2c8,#bcd998)}
+.station.wait{background:linear-gradient(180deg,#d9d2c2,#bdb3a0)}
+.station.wait .st-ico{filter:grayscale(.8);opacity:.7}
+.station.wait .st-form{display:none}
+.st-waitmsg{display:none;margin:0 10px 10px;padding:10px 12px;border-radius:6px;font-size:14px;font-weight:700;color:var(--ink);
+  background:var(--grain),linear-gradient(180deg,var(--wood-700),#432612)}
+.station.wait .st-waitmsg{display:block}
 .station.done .st-ico{background:linear-gradient(160deg,#7cc35a,var(--leaf-deep));color:#fff7d6}
 .station.done .st-status{color:var(--leaf-deep)}
 .station.done .st-form{display:none}
@@ -374,18 +380,29 @@ button,input{font:inherit;color:inherit}
 /* ===================== الإعدادات: غيّر أسماء المحطات وكلمات السر من هنا ===================== */
 const CONFIG = {
   stations: [
-    { id: "s1", name: "الحجرة المظلمة", icon: "door", steps: [
+    { id: "s1", name: "الحجرة المظلمة", icon: "door", round: 1, steps: [
       { label: "اكتبوا السؤال الذي وجدتموه في الحجرة", button: "أرسل السؤال", water: 0.4,
         accept: ["اسم البيعة التي كانت تحت الشجرة"], keywords: ["بيعة", "شجرة"],
         success: "أحسنتم! حصلتم على بعض الماء. والآن ابحثوا عن الجواب.", wrong: "هذا ليس السؤال الموجود في الحجرة. اقرؤوه جيدًا واكتبوه مرة أخرى." },
       { label: "اكتبوا الجواب", button: "أرسل الجواب", water: 0.6,
         accept: ["الرضوان", "رضوان", "بيعة الرضوان"] }
     ] },
-    { id: "s2", name: "محطة الغيمة", icon: "cloud",    code: "202" },
-    { id: "s3", name: "محطة الجبل",  icon: "mountain", code: "303" },
-    { id: "s4", name: "محطة النجمة", icon: "star",     code: "404" },
-    { id: "s5", name: "محطة القمر",  icon: "moon",     code: "505" },
-    { id: "s6", name: "محطة القطرة", icon: "drop",     code: "606" }
+    { id: "s2", name: "محطة الغيمة", icon: "cloud",    code: "202", round: 1 },
+    { id: "s3", name: "محطة الجبل",  icon: "mountain", code: "303", round: 1 },
+    { id: "s4", name: "محطة النجمة", icon: "star",     code: "404", round: 1 },
+    // الجولة الثانية: يكتب المعلّم «فوز» أو «خسر» في خانة المحطة
+    { id: "s5", name: "محطة القمر",  icon: "moon", round: 2, steps: [ { label: "يكتب المعلّم النتيجة هنا", button: "أدخل الرمز", placeholder: "رمز المعلّم",
+        wrong: "هذا الرمز غير صحيح. اطلبوا من المعلّم أن يكتبه.",
+        results: [
+          { accept: ["فوز", "فاز"], water: 1, toast: "مبروك الفوز! ماء كثير من", success: "مبروك الفوز! حصلتم على ماء كثير، اذهبوا واسقوا البذرة." },
+          { accept: ["خسر", "خسارة"], water: 0.35, toast: "قليل من الماء من", success: "حصلتم على قليل من الماء. أحسنتم المحاولة!" }
+        ] } ] },
+    { id: "s6", name: "محطة القطرة", icon: "drop", round: 2, steps: [ { label: "يكتب المعلّم النتيجة هنا", button: "أدخل الرمز", placeholder: "رمز المعلّم",
+        wrong: "هذا الرمز غير صحيح. اطلبوا من المعلّم أن يكتبه.",
+        results: [
+          { accept: ["فوز", "فاز"], water: 1, toast: "مبروك الفوز! ماء كثير من", success: "مبروك الفوز! حصلتم على ماء كثير، اذهبوا واسقوا البذرة." },
+          { accept: ["خسر", "خسارة"], water: 0.35, toast: "قليل من الماء من", success: "حصلتم على قليل من الماء. أحسنتم المحاولة!" }
+        ] } ] }
   ],
   pourSeconds: 6,  // كم ثانية سقي يحتاجها ماء كل محطة
   reportUrl: ""    // رابط Google Apps Script لإرسال تقدّم الفرق إلى المعلّم
@@ -616,6 +633,10 @@ function stepMatches(step, raw) {
   if ((step.accept || []).some(a => norm2(a) === v)) return true;
   return !!(step.keywords && step.keywords.length && step.keywords.every(k => v.includes(norm2(k))));
 }
+// a step with `results` takes one of several codes, each giving its own share of water (e.g. win / lose)
+const matchResult = (step, raw) => step.results ? step.results.find(r => stepMatches(r, raw)) || null : (stepMatches(step, raw) ? step : null);
+// stations tied to a round stay closed until the teacher starts that round
+const roundLocked = st => !!(CONFIG.reportUrl && st.round && round.n < st.round);
 
 CONFIG.stations.forEach((st, i) => {
   const li = document.createElement("li");
@@ -636,6 +657,7 @@ CONFIG.stations.forEach((st, i) => {
         <p class="st-msg" aria-live="polite"></p>
       </form>
       <p class="st-donemsg"></p>
+      <p class="st-waitmsg"></p>
     </div></div>`;
   li.querySelector(".st-name").textContent = st.name;
   list.appendChild(li);
@@ -646,13 +668,14 @@ CONFIG.stations.forEach((st, i) => {
   form.addEventListener("submit", e => {
     e.preventDefault();
     const steps = stepsOf(st), k = stepsDone(st), step = steps[k];
-    if (!step) return;
+    if (!step || roundLocked(st)) return;
     if (!norm2(input.value)) { setMsg(msg, step.code ? "اكتب كلمة السر أولًا." : "اكتبوا الإجابة أولًا.", "bad"); input.focus(); return; }
-    if (stepMatches(step, input.value)) {
+    const res = matchResult(step, input.value);
+    if (res) {
       input.value = "";
-      const last = unlockStep(st, k);
+      const last = unlockStep(st, k, res);
       if (last) {
-        setMsg(msg, "أحسنتم! امتلأ الإبريق، اذهبوا واسقوا البذرة.", "ok");
+        setMsg(msg, res.success || "أحسنتم! امتلأ الإبريق، اذهبوا واسقوا البذرة.", "ok");
         setTimeout(() => { if (openId === st.id) toggleStation(st.id); }, 1500);
       } else {
         setMsg(msg, step.success || "أحسنتم! حصلتم على بعض الماء.", "ok");
@@ -679,22 +702,24 @@ function toggleStation(id) {
   openId = next;
   if (next) {
     const li = list.querySelector(`[data-id="${next}"]`), inp = li.querySelector("input");
-    if (!li.classList.contains("done")) setTimeout(() => inp.focus({ preventScroll: true }), 120);
+    if (!li.classList.contains("done") && !li.classList.contains("wait")) setTimeout(() => inp.focus({ preventScroll: true }), 120);
     setTimeout(() => li.scrollIntoView({ block: "nearest", behavior: "smooth" }), 330);
   }
 }
 // returns true when this was the station's last step
-function unlockStep(st, k) {
+function unlockStep(st, k, res) {
   const steps = stepsOf(st);
   if (stepsDone(st) !== k) return false;
   state.steps[st.id] = k + 1;
-  state.water += WPS * (steps[k].water != null ? steps[k].water : 1 / steps.length);
+  const share = res && res.water != null ? res.water : steps[k].water != null ? steps[k].water : 1 / steps.length;
+  state.water += WPS * share;
   const last = k + 1 >= steps.length;
   if (last && !state.unlocked.includes(st.id)) state.unlocked.push(st.id);
   save(true);
   report();
   renderStations();
-  toast((last ? "امتلأ الإبريق من " : "ماء من ") + st.name, last ? "اسقوا البذرة!" : "حصلتم على بعض الماء", 2600);
+  if (res && res.toast) toast(res.toast, st.name, 3000);
+  else toast((last ? "امتلأ الإبريق من " : "ماء من ") + st.name, last ? "اسقوا البذرة!" : "حصلتم على بعض الماء", 2600);
   canEl.classList.remove("filling"); void canEl.offsetWidth; canEl.classList.add("filling");
   return last;
 }
@@ -703,11 +728,14 @@ function renderStations() {
   const n = state.unlocked.length;
   list.querySelectorAll(".station").forEach(li => {
     const st = CONFIG.stations.find(x => x.id === li.dataset.id), steps = stepsOf(st), k = stepsDone(st);
-    const done = k >= steps.length, multi = steps.length > 1;
+    const done = k >= steps.length, multi = steps.length > 1, wait = !done && roundLocked(st);
     li.classList.toggle("done", done);
+    li.classList.toggle("wait", wait);
+    li.querySelector(".st-waitmsg").textContent = wait ? `هذه المحطة تُفتح عندما يبدأ المعلّم الجولة ${toAr(st.round)}.` : "";
     li.querySelector(".st-status").innerHTML = done ? CHECK + "فُتح الماء"
+      : wait ? LOCK + `تُفتح في الجولة ${toAr(st.round)}`
       : k > 0 ? LOCK + `أُنجزت ${toAr(k)} من ${toAr(steps.length)}، بقيت خطوة`
-      : LOCK + (multi ? "مقفلة، فيها " + toAr(steps.length) + " خطوات" : "مقفلة، تحتاج كلمة السر");
+      : LOCK + (steps[0].results ? "بانتظار رمز المعلّم" : multi ? "مقفلة، فيها " + toAr(steps.length) + " خطوات" : "مقفلة، تحتاج كلمة السر");
     const step = steps[Math.min(k, steps.length - 1)];
     li.querySelector(".st-step").textContent = multi && !done ? `الخطوة ${toAr(k + 1)} من ${toAr(steps.length)}: ` : "";
     li.querySelector(".st-label").textContent = step.label;
@@ -1115,7 +1143,9 @@ async function pollRound() {
     if (Math.abs(target - state.adj) > .05) applyAdj(target);
   }
   const was = round.status;
+  const wasN = round.n;
   round.status = s.status; round.n = Number(s.round) || 0;
+  if (round.n !== wasN) renderStations();
   renderRound();
   if (was !== "unknown" && was !== round.status) {
     if (round.status === "running") toast("بدأت الجولة " + toAr(round.n), "هيا اسقوا البذرة!");
