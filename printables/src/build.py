@@ -3,7 +3,7 @@ from pathlib import Path
 from fingerprints import OUT
 
 here = Path(__file__).parent
-for name in ("basma", "basma-2"):
+for name in ("basma", "basma-2", "basma-3"):
     html = (here / f"{name}.template.html").read_text()
     for key, svg in OUT.items():
         html = html.replace("{{" + key + "}}", svg)

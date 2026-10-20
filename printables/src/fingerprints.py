@@ -36,31 +36,33 @@ def ridges(kind):
         d.append(arch_line(y, -3)); y += 5.6
     return d
 
-def body(kind, mirror=False, dot=None, fork=None):
+def body(kind, mirror=False, dot=None, fork=None, marks=()):
     g = "".join(f'<path d="{p}"/>' for p in ridges(kind))
-    if dot:
-        x, y = dot
-        g += f'<circle cx="{x}" cy="{y}" r="3.1" fill="#fff" stroke="none"/><circle cx="{x}" cy="{y}" r="2.1" fill="{INK}" stroke="none"/>'
-    if fork:
-        x, y, s = fork
-        g += f'<path d="M{x} {y} q6 {s*1.2} 12 {s*2.5}"/>'
+    marks = list(marks) + ([dot] if dot else []) + ([fork] if fork else [])
+    for m in marks:
+        if len(m) == 2:  # dot (island)
+            x, y = m
+            g += f'<circle cx="{x}" cy="{y}" r="3.1" fill="#fff" stroke="none"/><circle cx="{x}" cy="{y}" r="2.1" fill="{INK}" stroke="none"/>'
+        else:  # fork, s = +1 bends down, -1 bends up
+            x, y, s = m
+            g += f'<path d="M{x} {y} q6 {s*1.2} 12 {s*2.5}"/>'
     t = ' transform="translate(100 0) scale(-1 1)"' if mirror else ""
     return f'<g{t}>{g}</g>'
 
-def fp(kind, mirror=False, dot=None, fork=None, uid="x"):
+def fp(kind, mirror=False, dot=None, fork=None, uid="x", marks=()):
     return (f'<svg viewBox="0 0 100 132" class="fp"><defs><clipPath id="c{uid}"><ellipse cx="50" cy="66" rx="45" ry="60"/></clipPath></defs>'
-            f'<g clip-path="url(#c{uid})" fill="none" stroke="{INK}" stroke-width="1.7" stroke-linecap="round">{body(kind, mirror, dot, fork)}</g>'
+            f'<g clip-path="url(#c{uid})" fill="none" stroke="{INK}" stroke-width="1.7" stroke-linecap="round">{body(kind, mirror, dot, fork, marks)}</g>'
             f'<ellipse cx="50" cy="66" rx="45" ry="60" fill="none" stroke="#c9d0ce" stroke-width="1"/></svg>')
 
-def fragment(kind, dot=None, fork=None, x0=40, y0=38, size=60, uid="frag"):
-    """A torn-looking piece of a print, cropped at (x0, y0) and turned upside down."""
+def fragment(kind, dot=None, fork=None, x0=40, y0=38, size=60, uid="frag", marks=(), turn=180):
+    """A torn-looking piece of a print, cropped at (x0, y0) and turned by `turn` degrees."""
     k = size / 60
     edge = " ".join(f"{float(a)*k:.1f},{float(b)*k:.1f}" for a, b in (pt.split(",") for pt in
         "4,6 18,2 31,5 45,1 57,7 55,21 59,34 54,47 57,58 42,55 29,59 16,54 3,57 6,42 1,29 5,16".split()))
     return (f'<svg viewBox="0 0 {size} {size}" class="fp"><defs><clipPath id="c{uid}"><polygon points="{edge}"/></clipPath></defs>'
             f'<g clip-path="url(#c{uid})"><rect width="{size}" height="{size}" fill="#fff"/>'
             f'<g fill="none" stroke="{INK}" stroke-width="1.7" stroke-linecap="round" '
-            f'transform="rotate(180 {size/2} {size/2}) translate({-x0} {-y0})">{body(kind, False, dot, fork)}</g></g>'
+            f'transform="rotate({turn} {size/2} {size/2}) translate({-x0} {-y0})">{body(kind, False, dot, fork, marks)}</g></g>'
             f'<polygon points="{edge}" fill="none" stroke="#9aa5a2" stroke-width=".8" stroke-dasharray="2 1.5"/></svg>')
 
 DOT, FORK = (78, 54.5), (66, 85, 1)
@@ -85,6 +87,40 @@ OUT = {
     "h5": fp("loop", dot=DOT, uid="h5"),
     "h6": fp("loop", dot=(78, 77.5), fork=(66, 47, -1), uid="h6"),
 }
+
+# hardest task: three turned pieces, each taken from one of six prints that differ only in small marks.
+# Each region holds two mark slots; options are indexes into the lists below.
+SLOTS = {
+    "dot1": [(82, 44.5), (82, 49.5), (82, 54.5)], "fork1": [(56, 52, 1), (56, 52, -1)],
+    "dot2": [(24.5, 66), (29.5, 66), (34.5, 66)], "dot2b": [(34.3, 54.3), (34.3, 77.7)],
+    "fork3": [(66, 85, 1), (66, 85, -1), (66, 80, 1)], "dot3": [(82, 77.5), (82, 92.5)],
+}
+REGIONS = {1: ("dot1", "fork1", 50, 30), 2: ("dot2", "dot2b", 10, 46), 3: ("fork3", "dot3", 50, 60)}
+PRINTS = [  # أ ب ج د هـ و
+    dict(dot1=0, fork1=1, dot2=1, dot2b=1, fork3=0, dot3=1),
+    dict(dot1=0, fork1=0, dot2=0, dot2b=0, fork3=1, dot3=0),
+    dict(dot1=1, fork1=1, dot2=2, dot2b=1, fork3=1, dot3=1),
+    dict(dot1=0, fork1=1, dot2=1, dot2b=1, fork3=2, dot3=1),
+    dict(dot1=2, fork1=0, dot2=1, dot2b=0, fork3=0, dot3=1),
+    dict(dot1=2, fork1=0, dot2=0, dot2b=0, fork3=2, dot3=1),
+]
+# pieces as shown on the page: (region, source print, turn) -> answers: ١ هـ، ٢ ج، ٣ ب
+PIECES = [(2, 4, 180), (3, 2, 90), (1, 1, 270)]
+
+def print_marks(p):
+    return [SLOTS[k][v] for k, v in p.items()]
+
+def piece_matches(region, source):
+    a, b, *_ = REGIONS[region]
+    want = (PRINTS[source][a], PRINTS[source][b])
+    return [i for i, p in enumerate(PRINTS) if (p[a], p[b]) == want]
+
+for i, p in enumerate(PRINTS):
+    OUT[f"x{i+1}"] = fp("loop", uid=f"x{i+1}", marks=print_marks(p))
+for n, (region, source, turn) in enumerate(PIECES, 1):
+    assert piece_matches(region, source) == [source], (n, piece_matches(region, source))
+    _, _, x0, y0 = REGIONS[region]
+    OUT[f"piece{n}"] = fragment("loop", x0=x0, y0=y0, size=38, uid=f"pc{n}", marks=print_marks(PRINTS[source]), turn=turn)
 
 if __name__ == "__main__":
     import json, sys
