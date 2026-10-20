@@ -55,12 +55,14 @@ OUT = {
     "type_arch": fp("arch", uid="ta"),
     "type_loop": fp("loop", uid="tl"),
     "type_whorl": fp("whorl", uid="tw"),
-    "cup": fp("loop", dot=DOT, fork=FORK, uid="cup"),
-    "card_a": fp("whorl", dot=DOT, fork=FORK, uid="a"),
-    "card_b": fp("loop", fork=FORK, uid="b"),
-    "card_c": fp("loop", dot=DOT, fork=FORK, uid="c"),
-    "card_d": fp("loop", mirror=True, dot=DOT, fork=FORK, uid="d"),
-    "card_e": fp("loop", dot=(78, 77.5), fork=(66, 47, -1), uid="e"),
+    "p1": fp("loop", fork=FORK, uid="p1"),
+    "p2": fp("loop", dot=DOT, fork=FORK, uid="p2"),
+    "p3": fp("whorl", dot=DOT, fork=FORK, uid="p3"),
+    "p4": fp("loop", mirror=True, dot=DOT, fork=FORK, uid="p4"),
+    "p5": fp("arch", dot=DOT, fork=FORK, uid="p5"),
+    "p6": fp("loop", dot=(78, 77.5), fork=(66, 47, -1), uid="p6"),
+    "p7": fp("loop", dot=DOT, fork=FORK, uid="p7"),
+    "p8": fp("loop", dot=DOT, uid="p8"),
 }
 
 if __name__ == "__main__":
