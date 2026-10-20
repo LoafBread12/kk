@@ -60,14 +60,11 @@
   .mystery h2 .n { background: var(--warm); }
   .mystery p.task { font-size: 10.4pt; line-height: 1.5; margin-bottom: 2mm; }
   .mystery p.task b { color: var(--warm); }
-  .cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2.4mm; }
-  .card { border: 1.3px solid var(--line); border-radius: 2.5mm; padding: 1.6mm 2mm; display: grid;
-          grid-template-columns: 25mm 1fr; gap: 2mm; align-items: center; }
-  .card .fp { width: 100%; display: block; }
+  .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2.4mm; }
+  .card { border: 1.3px solid var(--line); border-radius: 2.5mm; padding: 1.6mm 1.6mm 1.8mm; text-align: center; }
+  .card .fp { width: 100%; max-width: 26mm; display: block; margin: 0 auto 1mm; }
   .card b { display: inline-grid; place-items: center; width: 7mm; height: 7mm; border-radius: 50%;
             border: 1.3px solid var(--ink); font-size: 11pt; }
-  .card span { display: block; font-size: 8.6pt; color: var(--muted); margin-top: 2.5mm; }
-  .card i { display: block; border-bottom: 1px dotted var(--ink); height: 6mm; }
   .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.5mm; margin-top: 2.4mm; }
   .steps div { background: #f4f6f5; border-radius: 2.5mm; padding: 2mm 2.6mm; font-size: 9.8pt; line-height: 1.4; }
   .steps div b { color: var(--warm); }
@@ -96,7 +93,7 @@
       <div>التاريخ: <i></i></div>
       <span class="badge">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></svg>
-        ١٠ – ١٥ دقيقة
+        ١٠ دقائق
       </span>
     </div>
   </header>
@@ -142,21 +139,18 @@
   </div>
 
   <section class="mystery">
-    <h2><span class="n">٣</span> البصمتان المتطابقتان <small>تحتاج إلى عين دقيقة!</small></h2>
-    <p class="task">أمامك ثماني بصمات. <b>المهمة الأولى:</b> اكتب تحت كل بصمة نوعها (قوس، عروة، دوّامة).
-      <b>المهمة الثانية:</b> بينها بصمتان فقط متطابقتان تمامًا، فابحث عنهما.</p>
+    <h2><span class="n">٣</span> البصمتان المتطابقتان <small>⏱ ٥ دقائق</small></h2>
+    <p class="task">أمامك ست بصمات، <b>اثنتان فقط</b> منها متطابقتان تمامًا. ابحث عنهما!</p>
     <div class="cards">
-      <div class="card">{{p1}}<div><b>أ</b><span>نوعها:</span><i></i></div></div>
-      <div class="card">{{p2}}<div><b>ب</b><span>نوعها:</span><i></i></div></div>
-      <div class="card">{{p3}}<div><b>ج</b><span>نوعها:</span><i></i></div></div>
-      <div class="card">{{p4}}<div><b>د</b><span>نوعها:</span><i></i></div></div>
-      <div class="card">{{p5}}<div><b>هـ</b><span>نوعها:</span><i></i></div></div>
-      <div class="card">{{p6}}<div><b>و</b><span>نوعها:</span><i></i></div></div>
-      <div class="card">{{p7}}<div><b>ز</b><span>نوعها:</span><i></i></div></div>
-      <div class="card">{{p8}}<div><b>ح</b><span>نوعها:</span><i></i></div></div>
+      <div class="card">{{p1}}<b>أ</b></div>
+      <div class="card">{{p2}}<b>ب</b></div>
+      <div class="card">{{p3}}<b>ج</b></div>
+      <div class="card">{{p4}}<b>د</b></div>
+      <div class="card">{{p6}}<b>هـ</b></div>
+      <div class="card">{{p7}}<b>و</b></div>
     </div>
     <div class="steps">
-      <div><b>١ ـ النوع:</b> اشطب ✗ كل بصمة ليست من النوع الأكثر تكرارًا هنا.</div>
+      <div><b>١ ـ النوع:</b> اشطب ✗ كل بصمة من نوع مختلف عن الأغلبية.</div>
       <div><b>٢ ـ الاتجاه:</b> من أيّ جهة تدخل الخطوط وتعود؟ اشطب المعاكسة.</div>
       <div><b>٣ ـ العلامات:</b> قارن النقطة والتفرّع: هل كلاهما موجود، وفي المكان نفسه؟</div>
     </div>
@@ -164,8 +158,8 @@
   </section>
 
   <div class="answers">
-    <b>الحل:</b> المهمة الأولى: أ عروة، ب عروة، ج دوّامة، د عروة، هـ قوس، و عروة، ز عروة، ح عروة.
-    &nbsp;|&nbsp; المهمة الثانية: <b>ب و ز</b>. (أ بلا نقطة، د عروة معاكسة، و علاماتها في مكان آخر، ح بلا تفرّع)
+    <b>الحل:</b> البصمتان المتطابقتان: <b>ب و و</b>.
+    &nbsp;|&nbsp; أ) لا توجد فيها النقطة &nbsp;|&nbsp; ج) دوّامة لا عروة &nbsp;|&nbsp; د) العروة في الاتجاه المعاكس &nbsp;|&nbsp; هـ) النقطة والتفرّع في مكانين مختلفين.
   </div>
 </div>
 </body>
