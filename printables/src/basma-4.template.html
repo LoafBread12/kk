@@ -71,6 +71,7 @@
   .piece { text-align: center; }
   .piece .fp { width: 20mm; display: block; margin: 0 auto 1mm; }
   .piece span { display: block; font-weight: 800; color: var(--warm); font-size: 10pt; }
+  .piece em { display: inline-block; line-height: 1.6; font-style: normal; font-size: 8.5pt; background: var(--warm); color: #fff; border-radius: 6px; padding: 0 1.5mm; }
   .piece i { display: block; margin: 1mm auto 0; width: 11mm; height: 10mm; border: 1.8px solid var(--warm);
              border-radius: 2mm; background: #fff; }
   .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.5mm; margin-top: 2.4mm; }
@@ -149,7 +150,7 @@
   <section class="mystery">
     <h2><span class="n">٣</span> الكلمة المخفيّة <small>⏱ ١٠ دقائق</small></h2>
     <p class="task">لكل بصمة من البصمات الثماني حرف. ابحث عن البصمة التي أُخذت منها كل قطعة، واكتب حرفها تحت القطعة.
-      <b>انتبه:</b> بعض القطع <b>مقلوبة</b>، وبصمتان لن تستعملهما أبدًا!</p>
+      <b>انتبه:</b> القطعتان ٢ و٥ <b>مقلوبتان رأسًا على عقب</b> (مكتوب تحتهما «مقلوبة»)، وبصمتان لن تستعملهما أبدًا!</p>
     <div class="cards">
         <div class="card">{{w1}}<b>{{wl1}}</b></div>
         <div class="card">{{w2}}<b>{{wl2}}</b></div>
@@ -162,10 +163,10 @@
     </div>
     <div class="pieces">
         <div class="piece">{{wp1}}<span>١</span><i></i></div>
-        <div class="piece">{{wp2}}<span>٢</span><i></i></div>
+        <div class="piece">{{wp2}}<span>٢ <em>↻ مقلوبة</em></span><i></i></div>
         <div class="piece">{{wp3}}<span>٣</span><i></i></div>
         <div class="piece">{{wp4}}<span>٤</span><i></i></div>
-        <div class="piece">{{wp5}}<span>٥</span><i></i></div>
+        <div class="piece">{{wp5}}<span>٥ <em>↻ مقلوبة</em></span><i></i></div>
         <div class="piece">{{wp6}}<span>٦</span><i></i></div>
     </div>
     <div class="final">الكلمة المخفيّة: <i style="width: 42mm"></i> <span>اقرأ الحروف من القطعة ١ إلى القطعة ٦، وهي اسم من أسماء الله الحسنى.</span></div>
