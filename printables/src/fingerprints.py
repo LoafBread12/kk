@@ -122,18 +122,18 @@ for n, (region, source, turn) in enumerate(PIECES, 1):
     _, _, x0, y0 = REGIONS[region]
     OUT[f"piece{n}"] = fragment("loop", x0=x0, y0=y0, size=38, uid=f"pc{n}", marks=print_marks(PRINTS[source]), turn=turn)
 
-# word task: six pieces, each from a print that carries a letter; in order they spell المصور.
+# word task: six pieces, each from a print that carries a letter; in order they spell أنفسكم.
 WORD_PRINTS = [  # index: letter
-    dict(dot1=1, fork1=0, dot2=0, dot2b=1, fork3=2, dot3=0),  # ا
-    dict(dot1=1, fork1=1, dot2=1, dot2b=0, fork3=1, dot3=0),  # ل
-    dict(dot1=1, fork1=0, dot2=0, dot2b=0, fork3=2, dot3=1),  # م
-    dict(dot1=0, fork1=0, dot2=1, dot2b=1, fork3=0, dot3=1),  # ص
-    dict(dot1=0, fork1=1, dot2=2, dot2b=1, fork3=1, dot3=0),  # و
-    dict(dot1=1, fork1=0, dot2=1, dot2b=1, fork3=0, dot3=0),  # ر
-    dict(dot1=0, fork1=1, dot2=0, dot2b=0, fork3=1, dot3=1),  # ك (decoy)
-    dict(dot1=2, fork1=0, dot2=1, dot2b=0, fork3=1, dot3=0),  # ن (decoy)
+    dict(dot1=1, fork1=0, dot2=0, dot2b=1, fork3=2, dot3=0),  # أ
+    dict(dot1=1, fork1=1, dot2=1, dot2b=0, fork3=1, dot3=0),  # ن
+    dict(dot1=1, fork1=0, dot2=0, dot2b=0, fork3=2, dot3=1),  # ف
+    dict(dot1=0, fork1=0, dot2=1, dot2b=1, fork3=0, dot3=1),  # س
+    dict(dot1=0, fork1=1, dot2=2, dot2b=1, fork3=1, dot3=0),  # ك
+    dict(dot1=1, fork1=0, dot2=1, dot2b=1, fork3=0, dot3=0),  # م
+    dict(dot1=0, fork1=1, dot2=0, dot2b=0, fork3=1, dot3=1),  # ر (decoy)
+    dict(dot1=2, fork1=0, dot2=1, dot2b=0, fork3=1, dot3=0),  # ل (decoy)
 ]
-WORD_LETTERS = ["ا", "ل", "م", "ص", "و", "ر", "ك", "ن"]
+WORD_LETTERS = ["أ", "ن", "ف", "س", "ك", "م", "ر", "ل"]
 WORD_ORDER = [3, 6, 0, 5, 7, 2, 4, 1]  # order the prints appear on the page
 WORD_PIECES = [(2, 0, 0), (1, 1, 180), (3, 2, 0), (1, 3, 0), (2, 4, 180), (3, 5, 0)]  # (region, source, turn)
 
