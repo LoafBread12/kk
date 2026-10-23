@@ -175,7 +175,9 @@ button,input{font:inherit;color:inherit}
   background:rgba(14,10,6,.9);border:2px solid var(--gold);box-shadow:0 16px 40px rgba(0,0,0,.5)}
 .pause-card h2{margin:0;font-family:var(--f-display);font-weight:400;font-size:30px;line-height:1.2;color:var(--gold)}
 .pause-card p{margin:0;font-size:16px;font-weight:600}
-.g-round{margin:0;font-weight:800;font-size:13px;color:#0f2d0c;background:var(--leaf);border-radius:20px;padding:0 12px}
+.g-round{margin:0;display:flex;align-items:center;gap:8px;font-weight:800;font-size:13px;color:#0f2d0c;background:var(--leaf);border-radius:20px;padding:0 4px 0 12px}
+.g-timer{font-variant-numeric:tabular-nums;background:#0f2d0c;color:#e3f2c8;border-radius:20px;padding:0 9px;font-size:14px;direction:ltr}
+.g-round.low .g-timer{background:#a8321f;color:#fff;animation:qdot 1s ease-in-out infinite}
 .join{position:absolute;inset:0;z-index:8;display:grid;place-items:center;padding:16px;background:rgba(8,24,36,.55);backdrop-filter:blur(2px)}
 .join-card{width:min(100%,380px);display:grid;gap:10px;padding:18px 20px 16px;border-radius:10px;text-align:center;
   background:var(--grain),linear-gradient(180deg,var(--wood-300),var(--wood-500) 45%,var(--wood-700));
@@ -380,7 +382,7 @@ button,input{font:inherit;color:inherit}
         <h1 class="g-title">بستان البذرة</h1>
         <p class="g-team" id="teamLabel" hidden></p>
         <p class="g-height"><small>طول النبتة</small><span id="heightTxt">٠ سم</span></p>
-        <p class="g-round" id="roundLabel" hidden></p>
+        <p class="g-round" id="roundLabel" hidden><span id="roundText"></span><span class="g-timer" id="roundTimer"></span></p>
         <p class="g-stage"><span id="stageNum">المرحلة ١ من ١٠</span>، <b id="stageName">بذرة</b></p>
         <ol class="track" id="track"></ol>
         <div class="next" title="النمو حتى المرحلة التالية"><span id="nextBar"></span></div>
@@ -1184,21 +1186,24 @@ joinEl.addEventListener("submit", e => {
 });
 /* ---------- rounds: the teacher starts and ends them; watering only while one is running ---------- */
 // "unknown" until the first answer, so a slow or unreachable sheet never locks the game
-const round = { status: CONFIG.reportUrl ? "unknown" : "running", n: 0 };
+// part: which of the round's parts is on; endsAt: when it stops (device clock, corrected by skew)
+const round = { status: CONFIG.reportUrl ? "unknown" : "running", n: 0, part: 0, parts: 4, endsAt: 0, skew: 0 };
 const canWater = () => round.status === "running" || round.status === "unknown";
 let lastPausedToast = 0;
 function pausedToast() {
   const now = performance.now();
   if (now - lastPausedToast < 2500) return;
   lastPausedToast = now;
-  toast("السقي متوقّف", round.status === "over" ? "انتهت اللعبة" : "انتظروا بدء الجولة");
+  toast("السقي متوقّف", round.status === "over" ? "انتهت اللعبة" : round.status === "break" ? "انتظروا الجزء التالي" : "انتظروا بدء الجولة");
 }
 function renderRound() {
   const p = $("#pause"), label = $("#roundLabel");
   label.hidden = !(round.status === "running" && round.n > 0);
-  label.textContent = "الجولة " + toAr(round.n);
+  $("#roundText").textContent = "الجولة " + toAr(round.n) + (round.part ? "، الجزء " + toAr(round.part) + " من " + toAr(round.parts) : "");
+  tickTimer();
   const msg = {
     idle:  ["استعدّوا!", "انتظروا حتى يبدأ المعلّم الجولة."],
+    break: ["انتهى الجزء " + toAr(round.part), "توقّف السقي. انتظروا المعلّم ليبدأ الجزء " + toAr(round.part + 1) + " من الجولة " + toAr(round.n) + "."],
     ended: ["انتهت الجولة " + toAr(round.n), "توقّف السقي. انتظروا الجولة التالية."],
     over:  ["انتهت اللعبة", "أحسنتم! انظروا إلى النتائج مع المعلّم."]
   }[round.status];
@@ -1206,6 +1211,24 @@ function renderRound() {
   if (msg) { $("#pauseTitle").textContent = msg[0]; $("#pauseText").textContent = msg[1]; }
   if (!canWater()) { dragging = false; keyPour = false; garden.classList.remove("pouring"); }
 }
+
+// countdown for the running part; when it reaches zero watering stops here without waiting for the sheet
+let lastTimerTxt = "";
+function tickTimer() {
+  if (round.status !== "running" || !round.endsAt) { $("#roundTimer").hidden = true; return; }
+  const left = Math.max(0, Math.ceil((round.endsAt - Date.now()) / 1000));
+  if (left === 0) {
+    round.status = round.part >= round.parts ? "ended" : "break";
+    renderRound();
+    toast("انتهى الوقت!", "انتهى الجزء " + toAr(round.part), 3000);
+    return;
+  }
+  const txt = toAr(Math.floor(left / 60)) + ":" + toAr(String(left % 60).padStart(2, "0"));
+  if (txt !== lastTimerTxt) { $("#roundTimer").textContent = txt; lastTimerTxt = txt; }
+  $("#roundTimer").hidden = false;
+  $("#roundLabel").classList.toggle("low", left <= 60);
+}
+setInterval(tickTimer, 500);
 async function pollRound() {
   if (!CONFIG.reportUrl) return;
   let s;
@@ -1236,7 +1259,11 @@ async function pollRound() {
   }
   const was = round.status;
   const wasN = round.n;
+  const wasPart = round.part;
   round.status = s.status; round.n = Number(s.round) || 0;
+  round.part = Number(s.part) || 0; round.parts = Number(s.parts) || 4;
+  if (s.now) round.skew = new Date(s.now).getTime() - Date.now();
+  round.endsAt = s.endsAt ? new Date(s.endsAt).getTime() - round.skew : 0;
   if (round.n !== wasN) {
     const before = Math.max(1, Math.min(wasN, maxRound));
     renderStations();
@@ -1244,7 +1271,9 @@ async function pollRound() {
   }
   renderRound();
   if (was !== "unknown" && was !== round.status) {
-    if (round.status === "running") toast("بدأت الجولة " + toAr(round.n), "هيا اسقوا البذرة!");
+    if (round.status === "running") toast(round.part > 1 ? "بدأ الجزء " + toAr(round.part) + " من الجولة " + toAr(round.n) : "بدأت الجولة " + toAr(round.n), "هيا اسقوا البذرة!");
+  } else if (round.status === "running" && round.part !== wasPart && wasPart) {
+    toast("بدأ الجزء " + toAr(round.part) + " من الجولة " + toAr(round.n), "هيا اسقوا البذرة!");
   }
 }
 

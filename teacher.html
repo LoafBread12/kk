@@ -40,6 +40,8 @@ h1{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(28px,5v
 /* round controls */
 .controls{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;background:rgba(0,0,0,.28)}
 .r-status{display:flex;align-items:center;gap:8px;font-weight:800;font-size:17px;margin-inline-end:auto}
+.t-timer{font-variant-numeric:tabular-nums;direction:ltr;background:rgba(0,0,0,.35);border-radius:20px;padding:0 10px;font-size:18px;color:#e3f2c8}
+.t-timer.low{background:#a8321f;color:#fff}
 .dot{width:12px;height:12px;border-radius:50%;background:#9aa7ad;flex:none}
 .dot.running{background:var(--leaf);box-shadow:0 0 0 4px rgba(109,187,79,.3);animation:pulse 1.6s ease-in-out infinite}
 .dot.ended{background:var(--gold)}
@@ -159,9 +161,11 @@ h1{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(28px,5v
   </header>
 
   <div class="controls" id="controls" hidden>
-    <div class="r-status"><span class="dot" id="dot"></span><span id="roundText">لم تبدأ أي جولة</span></div>
+    <div class="r-status"><span class="dot" id="dot"></span><span id="roundText">لم تبدأ أي جولة</span><span class="t-timer" id="tTimer" hidden></span></div>
     <button class="btn go" type="button" id="btnStart">ابدأ الجولة ١</button>
-    <button class="btn stop" type="button" id="btnEnd">أنهِ الجولة</button>
+    <button class="btn go" type="button" id="btnPart">ابدأ الجزء ٢</button>
+    <button class="btn stop" type="button" id="btnEnd">أنهِ الجزء</button>
+    <button class="btn stop" type="button" id="btnEndRound">أنهِ الجولة</button>
     <button class="btn end" type="button" id="btnOver">أنهِ اللعبة وأظهر النتائج</button>
     <button class="btn ghost" type="button" id="btnNew">لعبة جديدة</button>
     <div class="amt" role="group" aria-label="نوع الهدية">
@@ -345,19 +349,24 @@ function renderChart(rows) {
 /* ---------- round controls ---------- */
 const STATUS_TEXT = {
   idle: () => "لم تبدأ أي جولة بعد",
-  running: n => `الجولة ${toAr(n)} جارية، الفرق تسقي الآن`,
+  running: (n, p, P) => `الجولة ${toAr(n)}، الجزء ${toAr(p)} من ${toAr(P)} جارٍ`,
+  break: (n, p, P) => `انتهى الجزء ${toAr(p)} من ${toAr(P)} في الجولة ${toAr(n)}، السقي متوقّف`,
   ended: n => `انتهت الجولة ${toAr(n)}، السقي متوقّف`,
   over: n => `انتهت اللعبة بعد ${toAr(n)} ${n === 1 ? "جولة" : "جولات"}`
 };
 function renderControls() {
   $("#controls").hidden = !URL_ || !hasRounds;
   $("#oldScript").hidden = !URL_ || hasRounds;
-  const s = game.status, n = game.round;
-  $("#dot").className = "dot " + s;
-  $("#roundText").textContent = (STATUS_TEXT[s] || STATUS_TEXT.idle)(n);
+  const s = game.status, n = game.round, part = game.part || 0, P = game.parts || 4;
+  $("#dot").className = "dot " + (s === "break" ? "ended" : s);
+  $("#roundText").textContent = (STATUS_TEXT[s] || STATUS_TEXT.idle)(n, part, P);
   $("#btnStart").textContent = "ابدأ الجولة " + toAr(n + 1);
-  $("#btnStart").hidden = s === "running" || s === "over";
+  $("#btnStart").hidden = !(s === "idle" || s === "ended");
+  $("#btnPart").textContent = `ابدأ الجزء ${toAr(part + 1)} من ${toAr(P)}`;
+  $("#btnPart").hidden = !(s === "break" && part < P);
   $("#btnEnd").hidden = s !== "running";
+  $("#btnEndRound").hidden = !(s === "running" || s === "break");
+  tickTeacherTimer();
   $("#btnOver").hidden = s === "over" || n === 0;
   $("#tabReplay").hidden = s !== "over";
 }
@@ -412,7 +421,27 @@ function adjust(r, delta, btn) {
   control("adjust", { id: r.id, delta });
 }
 $("#btnStart").addEventListener("click", () => control("start"));
+$("#btnPart").addEventListener("click", () => control("part"));
 $("#btnEnd").addEventListener("click", () => control("end"));
+$("#btnEndRound").addEventListener("click", () => control("endRound"));
+
+// countdown of the running part, from the sheet's deadline corrected for this computer's clock
+let skew = 0;
+function tickTeacherTimer() {
+  const t = $("#tTimer");
+  const ends = game.endsAt ? new Date(game.endsAt).getTime() - skew : 0;
+  if (game.status !== "running" || !ends) { t.hidden = true; return; }
+  const left = Math.max(0, Math.ceil((ends - Date.now()) / 1000));
+  t.hidden = false;
+  t.textContent = toAr(Math.floor(left / 60)) + ":" + toAr(String(left % 60).padStart(2, "0"));
+  t.classList.toggle("low", left <= 60);
+  if (left === 0) {
+    game.status = (game.part || 0) >= (game.parts || 4) ? "ended" : "break";
+    renderControls();
+    setTimeout(load, 1500);
+  }
+}
+setInterval(tickTeacherTimer, 500);
 twoTap($("#btnOver"), "أنهِ اللعبة وأظهر النتائج", "اضغط مرة أخرى لإنهاء اللعبة", "over");
 twoTap($("#btnNew"), "لعبة جديدة", "اضغط مرة أخرى لمسح كل شيء", "new");
 
@@ -424,7 +453,7 @@ function buildReplay(h) {
   const now = Date.now();
   const rounds = (h.rounds || []).filter(r => r.start).map(r => {
     const s = new Date(r.start).getTime(), e = r.end ? new Date(r.end).getTime() : now;
-    return { n: r.round, s, e: Math.max(e, s + 1000) };
+    return { n: r.round, part: r.part || 1, s, e: Math.max(e, s + 1000) };
   });
   if (!rounds.length) return null;
   let v = 0;
@@ -455,7 +484,8 @@ function drawTimeline() {
   rp.rounds.forEach(r => {
     const seg = el("div", "seg"); seg.style.flex = String(Math.max(r.v1 - r.v0, rp.total * .06));
     const fill = el("div", "fill"); r.fillEl = fill;
-    seg.append(fill, el("span", null, "الجولة " + toAr(r.n)));
+    seg.append(fill, el("span", null, r.part > 1 ? "الجزء " + toAr(r.part) : "الجولة " + toAr(r.n)));
+    if (r.part === 1) seg.style.marginInlineStart = r.v0 ? "8px" : "0";
     tl.append(seg);
   });
 }
@@ -476,9 +506,9 @@ function drawRace() {
 
 function frame(p) {
   const cur = rp.rounds.find(r => p <= r.v1) || rp.rounds[rp.rounds.length - 1];
-  $("#rpRound").textContent = "الجولة " + toAr(cur.n);
+  $("#rpRound").textContent = "الجولة " + toAr(cur.n) + "، الجزء " + toAr(cur.part);
   const secs = Math.max(0, Math.round((Math.min(p, cur.v1) - cur.v0) / 1000));
-  $("#rpClock").textContent = `الوقت في الجولة: \u2066${toAr(Math.floor(secs / 60))}:${toAr(String(secs % 60).padStart(2, "0"))}\u2069`;
+  $("#rpClock").textContent = `الوقت في الجزء: \u2066${toAr(Math.floor(secs / 60))}:${toAr(String(secs % 60).padStart(2, "0"))}\u2069`;
   rp.rounds.forEach(r => { r.fillEl.style.width = Math.max(0, Math.min(1, (p - r.v0) / (r.v1 - r.v0))) * 100 + "%"; });
   const vals = rp.teams.map(tm => ({ tm, ...rp.at(tm, p) }));
   vals.sort((a, b) => (b.s - a.s) || (b.d - a.d) || a.tm.team.localeCompare(b.tm.team, "ar"));
@@ -508,12 +538,15 @@ function drawSummary() {
   const box = $("#summary"); box.textContent = "";
   const table = el("table"), head = el("tr");
   head.append(el("th", null, "الفريق"));
-  rp.rounds.forEach(r => head.append(el("th", null, "بعد الجولة " + toAr(r.n))));
+  // one column per round: the end of its last part
+  const ends = [];
+  rp.rounds.forEach(r => { const last = ends.find(x => x.n === r.n); if (last) last.v1 = r.v1; else ends.push({ n: r.n, v1: r.v1 }); });
+  ends.forEach(r => head.append(el("th", null, "بعد الجولة " + toAr(r.n))));
   table.append(head);
   [...rp.teams].sort((a, b) => a.rank - b.rank).forEach(tm => {
     const tr = el("tr"); tr.append(el("td", null, tm.team || "بلا اسم"));
     let prev = 0;
-    rp.rounds.forEach(r => {
+    ends.forEach(r => {
       const s = rp.at(tm, r.v1).s, d = Math.round(s - prev);
       tr.append(el("td", d > 0 ? "up" : null, s ? fmtH(s) + (d && prev ? ` (${fmtD(d)})` : "") : "–"));
       prev = s;
@@ -566,7 +599,7 @@ async function load() {
     const data = await (await fetch(URL_, { cache: "no-store" })).json();
     let rows;
     if (Array.isArray(data)) { rows = data; hasRounds = false; }            // older script without rounds
-    else { rows = data.rows || []; game = data.state || game; hasRounds = true; }
+    else { rows = data.rows || []; game = data.state || game; hasRounds = true; if (game.now) skew = new Date(game.now).getTime() - Date.now(); }
     rows.sort((a, b) => (heightOf(b) - heightOf(a)) || (b.stage - a.stage) || (b.stations - a.stations) || String(a.updated).localeCompare(String(b.updated)));
     lastRows = rows;
     renderCards(rows); renderChart(rows); renderControls();

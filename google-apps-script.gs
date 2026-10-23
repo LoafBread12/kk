@@ -7,10 +7,14 @@
 // رمز المعلّم: تطلبه لوحة المعلّم قبل بدء الجولات أو إنهائها. غيّره إلى رمز تختاره.
 const TEACHER_PIN = "1234";
 
+// كل جولة فيها ٤ أجزاء، وكل جزء ١٥ دقيقة. يبدأ المعلّم كل جزء بنفسه، ويتوقّف السقي تلقائيًا عند انتهاء وقته.
+const PARTS_PER_ROUND = 4;
+const PART_MINUTES = 15;
+
 const SHEETS = {
   progress: { name: "التقدم", headers: ["الجهاز", "الفريق", "المرحلة", "اسم المرحلة", "المحطات المفتوحة", "انتهى", "آخر تحديث", "النمو بالسقي (سم)", "تعديل المعلّم (سم)", "الطول (سم)"] },
   log:      { name: "السجل",  headers: ["الوقت", "الجولة", "الجهاز", "الفريق", "المرحلة", "المحطات المفتوحة", "انتهى", "الطول (سم)"] },
-  rounds:   { name: "الجولات", headers: ["الجولة", "البداية", "النهاية"] },
+  rounds:   { name: "الجولات", headers: ["الجولة", "البداية", "النهاية", "الجزء", "موعد الانتهاء"] },
   items:    { name: "العناصر", headers: ["المعرّف", "الجهاز", "الفريق", "النوع", "المقدار (سم)", "وقت الإعطاء", "وقت الاستخدام"] }
 };
 
@@ -44,15 +48,41 @@ function clear_(key) {
   if (n > 0) sh.deleteRows(2, n);
 }
 
+// status: idle (no round yet) | running (a part is on) | break (between parts) | ended (round over) | over (game over).
+// A running part whose time is up reads as break, or ended after the last part, without anyone pressing a button.
 function state_() {
   const p = PropertiesService.getScriptProperties();
   let gameId = p.getProperty("gameId");
   if (!gameId) { gameId = "g" + Date.now().toString(36); p.setProperty("gameId", gameId); }
+  let status = p.getProperty("status") || "idle";
+  const part = Number(p.getProperty("part") || 0), endsAt = Number(p.getProperty("endsAt") || 0);
+  if (status === "running" && endsAt && Date.now() >= endsAt) status = part >= PARTS_PER_ROUND ? "ended" : "break";
   return {
-    status: p.getProperty("status") || "idle",   // idle | running | ended | over
+    status: status,
     round: Number(p.getProperty("round") || 0),
+    part: part,
+    parts: PARTS_PER_ROUND,
+    endsAt: endsAt ? new Date(endsAt).toISOString() : "",
+    now: new Date().toISOString(),
     gameId: gameId
   };
+}
+// write down a part that ran out on its own: its status and its end time in the rounds sheet
+function settle_() {
+  const p = PropertiesService.getScriptProperties();
+  const endsAt = Number(p.getProperty("endsAt") || 0);
+  if (p.getProperty("status") !== "running" || !endsAt || Date.now() < endsAt) return;
+  closePart_(new Date(endsAt));
+  p.setProperty("status", Number(p.getProperty("part") || 0) >= PARTS_PER_ROUND ? "ended" : "break");
+}
+function closePart_(when) {
+  const sh = sheet_("rounds"), n = sh.getLastRow();
+  if (n >= 2 && !sh.getRange(n, 3).getValue()) sh.getRange(n, 3).setValue(when);
+}
+function startPart_(round, part) {
+  const now = new Date(), ends = new Date(now.getTime() + PART_MINUTES * 60000);
+  setState_({ status: "running", round: round, part: part, endsAt: ends.getTime() });
+  sheet_("rounds").appendRow([round, now, "", part, ends]);
 }
 function setState_(patch) {
   const p = PropertiesService.getScriptProperties();
@@ -141,22 +171,20 @@ function pendingItems_(id) {
 
 function control_(d) {
   if (String(d.pin) !== TEACHER_PIN) return out_({ error: "bad_pin" });
+  settle_();
   const st = state_();
   const now = new Date();
-  const rounds = sheet_("rounds");
-  const closeRound = () => {
-    const n = rounds.getLastRow();
-    if (n >= 2 && !rounds.getRange(n, 3).getValue()) rounds.getRange(n, 3).setValue(now);
-  };
-  if (d.action === "start") {
-    if (st.status !== "running" && st.status !== "over") {
-      setState_({ status: "running", round: st.round + 1 });
-      rounds.appendRow([st.round + 1, now, ""]);
-    }
-  } else if (d.action === "end") {
-    if (st.status === "running") { closeRound(); setState_({ status: "ended" }); }
+  if (d.action === "start") {                       // a new round, from its first part
+    if (st.status === "idle" || st.status === "ended") startPart_(st.round + 1, 1);
+  } else if (d.action === "part") {                 // the next part of the current round
+    if (st.status === "break" && st.part < PARTS_PER_ROUND) startPart_(st.round, st.part + 1);
+  } else if (d.action === "end") {                  // end the running part early
+    if (st.status === "running") { closePart_(now); setState_({ status: st.part >= PARTS_PER_ROUND ? "ended" : "break", endsAt: now.getTime() }); }
+  } else if (d.action === "endRound") {             // end the whole round now
+    if (st.status === "running") closePart_(now);
+    if (st.status === "running" || st.status === "break") setState_({ status: "ended", endsAt: now.getTime() });
   } else if (d.action === "over") {
-    if (st.status === "running") closeRound();
+    if (st.status === "running") closePart_(now);
     setState_({ status: "over" });
   } else if (d.action === "give") {
     return give_(d);
@@ -164,7 +192,7 @@ function control_(d) {
     return adjust_(d, st);
   } else if (d.action === "new") {
     clear_("progress"); clear_("log"); clear_("rounds"); clear_("items");
-    setState_({ status: "idle", round: 0, gameId: "g" + Date.now().toString(36) });
+    setState_({ status: "idle", round: 0, part: 0, endsAt: 0, gameId: "g" + Date.now().toString(36) });
   } else {
     return out_({ error: "bad_action" });
   }
@@ -197,7 +225,11 @@ function doGet(e) {
     return out_(st);
   }
   if (action === "history") {
-    const rounds = body_("rounds").map(r => ({ round: Number(r[0]), start: iso_(r[1]), end: iso_(r[2]) }));
+    // a part with no end written yet ends at its deadline, or now if that is earlier
+    const rounds = body_("rounds").map(r => ({
+      round: Number(r[0]), part: Number(r[3]) || 1, start: iso_(r[1]),
+      end: r[2] ? iso_(r[2]) : r[4] instanceof Date && r[4].getTime() < Date.now() ? iso_(r[4]) : ""
+    }));
     const log = body_("log").map(r => ({
       t: iso_(r[0]), round: Number(r[1]) || 0, id: String(r[2]), team: plain_(r[3]),
       stage: Number(r[4]) || 1, stations: Number(r[5]) || 0, done: r[6] === "نعم", height: Number(r[7]) || 0
