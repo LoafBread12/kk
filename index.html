@@ -328,10 +328,10 @@ button,input{font:inherit;color:inherit}
     <div class="quests" id="quests">
       <button class="qtab" id="qtab" type="button" aria-expanded="false" aria-controls="qpanel">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h11a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7" fill="#f4e8cc" stroke="#7a5530" stroke-width="1.6"/><path d="M6 4a2 2 0 0 0-2 2v1h4V6a2 2 0 0 0-2-2z" fill="#d9b67f" stroke="#7a5530" stroke-width="1.6"/><path d="M7 20a2 2 0 0 1-2-2v-1h4v1a2 2 0 0 1-2 2z" fill="#d9b67f" stroke="#7a5530" stroke-width="1.6"/><path d="M10 9h6M10 12h6M10 15h4" stroke="#7a5530" stroke-width="1.5" stroke-linecap="round"/></svg>
-        <span>ألغاز إضافية</span><span class="q-count" id="qcount">٠ من ٣</span><span class="q-dot" aria-hidden="true"></span>
+        <span>مهام إضافية</span><span class="q-count" id="qcount">٠ من ٣</span><span class="q-dot" aria-hidden="true"></span>
       </button>
       <div class="qpanel" id="qpanel" hidden>
-        <div class="qp-head"><h3>ألغاز إضافية</h3><p>كل جواب صحيح يملأ الإبريق كاملًا.</p></div>
+        <div class="qp-head"><h3>مهام إضافية</h3><p>كل جواب صحيح يملأ الإبريق كاملًا.</p></div>
         <ol class="qp-list" id="qlist"></ol>
       </div>
     </div>
@@ -465,14 +465,14 @@ const CONFIG = {
           { accept: ["فوز", "فاز"], water: 1, toast: "مبروك الفوز! ماء كثير من", success: "مبروك الفوز! حصلتم على ماء كثير، اذهبوا واسقوا البذرة." },
           { accept: ["خسر", "خسارة"], water: 0.35, toast: "قليل من الماء من", success: "حصلتم على قليل من الماء. أحسنتم المحاولة!" }
         ] } ] },
-    { id: "s6", name: "محطة القطرة", icon: "drop", round: 2, steps: [ { label: "يكتب المعلّم النتيجة هنا", button: "أدخل الرمز", placeholder: "رمز المعلّم",
+    { id: "s6", name: "محطة السومو", icon: "ring", round: 2, steps: [ { label: "يكتب المعلّم النتيجة هنا", button: "أدخل الرمز", placeholder: "رمز المعلّم",
         wrong: "هذا الرمز غير صحيح. اطلبوا من المعلّم أن يكتبه.",
         results: [
           { accept: ["فوز", "فاز"], water: 1, toast: "مبروك الفوز! ماء كثير من", success: "مبروك الفوز! حصلتم على ماء كثير، اذهبوا واسقوا البذرة." },
           { accept: ["خسر", "خسارة"], water: 0.35, toast: "قليل من الماء من", success: "حصلتم على قليل من الماء. أحسنتم المحاولة!" }
         ] } ] }
   ],
-  // ألغاز إضافية في الشريط الصغير أعلى اليسار: كل جواب صحيح يعطي إبريقًا كاملًا
+  // مهام إضافية في الشريط الصغير أعلى اليسار: كل جواب صحيح يعطي إبريقًا كاملًا
   sideQuests: [
     { id: "q1", q: "ما الشجرة التي أقسم الله بها مع الزيتون في أول سورة التين؟", accept: ["التين", "تين", "شجرة التين"] },
     { id: "q2", q: "كم عدد أركان الإسلام؟", accept: ["خمسة", "خمس", "5"] },
@@ -508,6 +508,7 @@ const ICONS = {
   mountain: '<svg viewBox="0 0 24 24"><path d="M1.5 20 9 6.5l4.2 7.4 2.3-3.4L22.5 20z" fill="currentColor"/><path d="M9 6.5l2.2 3.9-2.2 1.5-2.1-1.4z" fill="#fff" opacity=".85"/></svg>',
   star: '<svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z" fill="currentColor"/></svg>',
   leaf: '<svg viewBox="0 0 24 24"><path d="M20 4C10 4 4 9 4 16c0 1.4.3 2.6.8 3.6C6 13 10 9.5 15 8c-4 2.3-7.3 6-8.9 11.4.9.4 1.9.6 3 .6C16 20 20 13 20 4z" fill="currentColor"/></svg>',
+  ring: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="8.5" stroke-width="2.4"/><circle cx="12" cy="12" r="4.8" stroke-width="1" stroke-dasharray="2 2"/><path d="M10 12h4" stroke-width="2" stroke-linecap="round"/><path d="M3.5 3.5l2 2M20.5 3.5l-2 2M3.5 20.5l2-2M20.5 20.5l-2-2" stroke-width="1.6" stroke-linecap="round"/></svg>',
   moon: '<svg viewBox="0 0 24 24"><path d="M15.5 2.8a9 9 0 1 0 6 15.6A7.4 7.4 0 0 1 15.5 2.8z" fill="currentColor"/></svg>',
   print: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M6.5 6.5A7.5 7.5 0 0 1 19.5 11"/><path d="M4.5 10.5a7.5 7.5 0 0 1 .8-2.4"/><path d="M8 19.5c1-1.8 1.5-4 1.5-6.5a2.5 2.5 0 0 1 5 0c0 1.2-.1 2.4-.3 3.5"/><path d="M5 17c.8-1.3 1.3-2.6 1.4-4.2A5.6 5.6 0 0 1 17.5 12c0 2.5-.4 5-1.3 7.2"/><path d="M12 13c0 3-.6 5.6-1.8 8"/><path d="M19.6 14.5c-.1 1-.3 2-.6 3"/></svg>',
   door: '<svg viewBox="0 0 24 24"><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16" fill="currentColor"/><path d="M3 21h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 6h8v15H8z" fill="#0f3349"/><circle cx="14" cy="13.5" r="1.2" fill="currentColor"/></svg>',
@@ -692,6 +693,10 @@ STAGES.forEach((s, i) => {
 });
 const pipsEl = $("#pips");
 CONFIG.stations.forEach(() => pipsEl.appendChild(document.createElement("i")));
+// with rounds on, the board shows only the current round's stations (round 1 before the game starts)
+const maxRound = Math.max(1, ...CONFIG.stations.map(st => st.round || 1));
+const boardRound = () => Math.max(1, Math.min(round.n, maxRound));
+const onBoard = st => !CONFIG.reportUrl || !st.round || st.round === boardRound();
 
 /* ---------- stations ---------- */
 const list = $("#stations");
@@ -821,8 +826,16 @@ function renderStations() {
     li.querySelector("input").classList.toggle("text", !step.code);
     li.querySelector(".st-donemsg").textContent = multi ? "أنجزتم كل خطوات هذه المحطة، وامتلأ الإبريق من مائها." : "تم استخدام كلمة السر لهذه المحطة، وامتلأ الإبريق من مائها.";
   });
-  $("#openCount").textContent = `المحطات المفتوحة: ${toAr(n)} من ${toAr(CONFIG.stations.length)}`;
-  [...pipsEl.children].forEach((p, i) => p.classList.toggle("on", i < n));
+  const shown = CONFIG.stations.filter(onBoard), m = shown.filter(st => state.unlocked.includes(st.id)).length;
+  list.querySelectorAll(".station").forEach(li => {
+    const vis = onBoard(CONFIG.stations.find(x => x.id === li.dataset.id));
+    li.hidden = !vis;
+    if (!vis && openId === li.dataset.id) toggleStation(openId);
+  });
+  $("#openCount").textContent = CONFIG.reportUrl && shown.length < CONFIG.stations.length
+    ? `محطات الجولة ${toAr(boardRound())}: ${toAr(m)} من ${toAr(shown.length)}`
+    : `المحطات المفتوحة: ${toAr(n)} من ${toAr(CONFIG.stations.length)}`;
+  [...pipsEl.children].forEach((p, i) => { p.hidden = i >= shown.length; p.classList.toggle("on", i < m); });
 }
 
 /* ---------- toast ---------- */
@@ -1224,7 +1237,11 @@ async function pollRound() {
   const was = round.status;
   const wasN = round.n;
   round.status = s.status; round.n = Number(s.round) || 0;
-  if (round.n !== wasN) renderStations();
+  if (round.n !== wasN) {
+    const before = Math.max(1, Math.min(wasN, maxRound));
+    renderStations();
+    if (boardRound() !== before && wasN > 0) toast("محطات جديدة!", "ظهرت محطات الجولة " + toAr(boardRound()), 3200);
+  }
   renderRound();
   if (was !== "unknown" && was !== round.status) {
     if (round.status === "running") toast("بدأت الجولة " + toAr(round.n), "هيا اسقوا البذرة!");
@@ -1398,7 +1415,7 @@ QUESTS.forEach((q, i) => {
       save(true);
       msg.textContent = ""; input.value = "";
       renderQuests();
-      toast("لغز محلول!", "امتلأ الإبريق كاملًا", 2800);
+      toast("مهمة منجزة!", "امتلأ الإبريق كاملًا", 2800);
       canEl.classList.remove("filling"); void canEl.offsetWidth; canEl.classList.add("filling");
     } else {
       msg.textContent = "ليس هذا الجواب، حاولوا مرة أخرى."; msg.className = "qp-msg bad";
