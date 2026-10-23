@@ -268,6 +268,18 @@ button,input{font:inherit;color:inherit}
 .qp-item.shake{animation:shake .45s}
 @media (prefers-reduced-motion:reduce){.qtab,.qtab .q-dot,.qpanel{animation:none}}
 
+
+/* prayer time: one calm screen over the whole game */
+.prayer{position:fixed;inset:0;z-index:60;display:grid;place-items:center;
+  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
+  background:radial-gradient(ellipse at 50% 30%,rgba(28,88,72,.96),rgba(8,32,28,.98) 70%);animation:prayIn .5s ease}
+@keyframes prayIn{from{opacity:0}}
+.prayer-card{width:min(100%,460px);display:grid;justify-items:center;gap:10px;text-align:center;color:var(--ink)}
+.prayer-card svg{width:150px;height:auto;filter:drop-shadow(0 0 24px rgba(244,195,79,.35))}
+.prayer-card h2{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(34px,7vw,52px);line-height:1.15;color:var(--gold)}
+.prayer-card p{margin:0;font-size:18px;font-weight:600;line-height:1.6;color:#e3f2e8}
+.prayer-card .pr-time{margin-top:6px;font-size:14px;font-weight:800;color:#bfe3d4;background:rgba(0,0,0,.25);border-radius:20px;padding:3px 14px}
+
 /* ---------- Station board ---------- */
 .board{display:flex;flex-direction:column;overflow:auto;
   background:repeating-linear-gradient(90deg,rgba(255,255,255,.03) 0 3px,transparent 3px 28px),linear-gradient(180deg,var(--sky-700),var(--sky-900))}
@@ -475,6 +487,22 @@ button,input{font:inherit;color:inherit}
   </aside>
 </div>
 
+<div class="prayer" id="prayer" hidden role="alertdialog" aria-labelledby="prayerTitle">
+  <div class="prayer-card">
+    <svg viewBox="0 0 200 150" aria-hidden="true">
+      <path d="M100 18c-4 8-12 13-12 22a12 12 0 0 0 24 0c0-9-8-14-12-22z" fill="#f4c34f"/>
+      <path d="M40 140V92a60 52 0 0 1 120 0v48z" fill="#e9d9a8"/>
+      <path d="M40 92a60 52 0 0 1 120 0" fill="none" stroke="#f4c34f" stroke-width="4"/>
+      <path d="M86 140v-28a14 14 0 0 1 28 0v28z" fill="#1c5848"/>
+      <rect x="10" y="62" width="16" height="78" rx="3" fill="#e9d9a8"/><path d="M10 62l8-16 8 16z" fill="#f4c34f"/>
+      <rect x="174" y="62" width="16" height="78" rx="3" fill="#e9d9a8"/><path d="M174 62l8-16 8 16z" fill="#f4c34f"/>
+      <path d="M2 140h196" stroke="#f4c34f" stroke-width="4" stroke-linecap="round"/>
+    </svg>
+    <h2 id="prayerTitle">حان وقت الصلاة</h2>
+    <p>توقّفت اللعبة. توضّؤوا وصلّوا، ونكمل بعد الصلاة إن شاء الله.</p>
+    <span class="pr-time" id="prayerTime"></span>
+  </div>
+</div>
 <script src="config.js"></script>
 <script>
 /* ===================== الإعدادات: غيّر أسماء المحطات وكلمات السر من هنا ===================== */
@@ -1230,12 +1258,13 @@ joinEl.addEventListener("submit", e => {
 /* ---------- rounds: the teacher starts and ends them; watering only while one is running ---------- */
 // "unknown" until the first answer, so a slow or unreachable sheet never locks the game
 // part: which of the round's parts is on; endsAt: when it stops (device clock, corrected by skew)
-const round = { status: CONFIG.reportUrl ? "unknown" : "running", n: 0, part: 0, parts: 4, partMin: 15, endsAt: 0, skew: 0, lesson: false };
+const round = { status: CONFIG.reportUrl ? "unknown" : "running", n: 0, part: 0, parts: 4, partMin: 15, endsAt: 0, skew: 0, lesson: false, prayer: false, frozenLeft: 0 };
 // lesson time (the teacher's «درس» button) closes watering, stations and gifts; only the extra tasks stay open
-const canWater = () => (round.status === "running" || round.status === "unknown") && !round.lesson;
+const canWater = () => (round.status === "running" || round.status === "unknown") && !round.lesson && !round.prayer;
 const canAnswer = () => !CONFIG.reportUrl || canWater();
-const canQuest = () => !CONFIG.reportUrl || round.lesson || canWater();
+const canQuest = () => !CONFIG.reportUrl || (!round.prayer && (round.lesson || canWater()));
 function closedMsg() {
+  if (round.prayer) return "وقت الصلاة. كل شيء متوقّف حتى ننتهي من الصلاة.";
   if (round.lesson) return "وقت الدرس. المحطات مغلقة حتى ينتهي الدرس، ويمكنكم حلّ المهام الإضافية.";
   return {
     idle: "لم تبدأ الجولة بعد. اكتبوا الإجابة عندما يبدأ المعلّم الجولة.",
@@ -1249,6 +1278,7 @@ function pausedToast() {
   const now = performance.now();
   if (now - lastPausedToast < 2500) return;
   lastPausedToast = now;
+  if (round.prayer) return;
   if (round.lesson) { toast("وقت الدرس", "السقي متوقّف حتى ينتهي الدرس"); return; }
   toast("السقي متوقّف", round.status === "over" ? "انتهت اللعبة" : round.status === "break" ? "انتظروا الشوط التالي" : "انتظروا بدء الجولة");
 }
@@ -1256,7 +1286,14 @@ function renderRound() {
   const p = $("#pause");
   renderTimebox();
   // answers follow the clock too: closed whenever no part is running
-  const openKey = canAnswer() + "|" + canQuest() + "|" + round.lesson;
+  $("#prayer").hidden = !round.prayer;
+  if (round.prayer) {
+    if (!qpanel.hidden) setQuestsOpen(false);
+    if (openId) toggleStation(openId);
+    $("#prayerTime").textContent = round.status === "running" && round.frozenLeft
+      ? "الوقت المتبقي من الشوط محفوظ: " + fmtClock(Math.ceil(round.frozenLeft / 1000)) : "";
+  }
+  const openKey = canAnswer() + "|" + canQuest() + "|" + round.lesson + "|" + round.prayer;
   if (round.answerOpen !== openKey) { round.answerOpen = openKey; renderStations(); renderQuests(); }
   qtab.classList.toggle("lesson", round.lesson && !qtab.classList.contains("all"));
   tickTimer();
@@ -1268,7 +1305,7 @@ function renderRound() {
     ended: ["انتهت الجولة " + toAr(round.n), "توقّف السقي. انتظروا الجولة التالية."],
     over:  ["انتهت اللعبة", "أحسنتم! انظروا إلى النتائج مع المعلّم."]
   }[round.status];
-  p.hidden = !msg || complete;
+  p.hidden = !msg || complete || round.prayer;
   if (msg) { $("#pauseTitle").textContent = msg[0]; $("#pauseText").textContent = msg[1]; }
   if (!canWater()) { dragging = false; keyPour = false; garden.classList.remove("pouring"); }
 }
@@ -1281,7 +1318,7 @@ function renderTimebox() {
   tbox.hidden = !CONFIG.reportUrl || round.status === "unknown";
   const st = round.status, n = round.n, part = round.part, P = round.parts;
   $("#tbRound").textContent = n ? "الجولة " + toAr(n) : "الجولات";
-  $("#tbStatus").textContent = round.lesson && st !== "over" ? "وقت الدرس. المهام الإضافية فقط مفتوحة." : {
+  $("#tbStatus").textContent = round.prayer ? "وقت الصلاة. الوقت متوقّف." : round.lesson && st !== "over" ? "وقت الدرس. المهام الإضافية فقط مفتوحة." : {
     idle: "انتظروا حتى يبدأ المعلّم الجولة الأولى.",
     running: `الشوط ${toAr(part)} من ${toAr(P)}، اسقوا الآن!`,
     break: `انتهى الشوط ${toAr(part)}. انتظروا المعلّم ليبدأ الشوط ${toAr(part + 1)}.`,
@@ -1315,6 +1352,11 @@ function renderTimebox() {
 }
 function tickTimer() {
   if (round.status !== "running" || !round.endsAt) return;
+  if (round.prayer) {                     // the clock is held during prayer
+    const held = fmtClock(Math.ceil(round.frozenLeft / 1000));
+    if (held !== lastTimerTxt) { $("#tbTime").textContent = held; lastTimerTxt = held; }
+    return;
+  }
   const left = Math.max(0, Math.ceil((round.endsAt - Date.now()) / 1000));
   if (left === 0) {
     round.status = round.part >= round.parts ? "ended" : "break";
@@ -1364,8 +1406,10 @@ async function pollRound() {
   const was = round.status;
   const wasN = round.n;
   const wasPart = round.part;
-  const wasLesson = round.lesson;
+  const wasLesson = round.lesson, wasPrayer = round.prayer;
   round.lesson = !!s.lesson;
+  round.prayer = !!s.prayer;
+  if (round.prayer !== wasPrayer && was !== "unknown" && !round.prayer) toast("انتهت الصلاة", "تقبّل الله، نكمل اللعب!", 3000);
   if (round.lesson !== wasLesson && was !== "unknown") {
     if (round.lesson) toast("وقت الدرس", "استمعوا إلى المعلّم، والمهام الإضافية مفتوحة", 3400);
     else toast("انتهى الدرس", canWater() ? "عودوا إلى السقي والمحطات!" : "انتظروا المعلّم", 3000);
@@ -1374,6 +1418,7 @@ async function pollRound() {
   round.part = Number(s.part) || 0; round.parts = Number(s.parts) || 4; round.partMin = Number(s.partMinutes) || 15;
   if (s.now) round.skew = new Date(s.now).getTime() - Date.now();
   round.endsAt = s.endsAt ? new Date(s.endsAt).getTime() - round.skew : 0;
+  round.frozenLeft = round.prayer && round.endsAt ? Math.max(0, round.endsAt - Date.now()) : 0;
   if (round.n !== wasN) {
     const before = Math.max(1, Math.min(wasN, maxRound));
     renderStations();

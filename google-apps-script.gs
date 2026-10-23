@@ -57,9 +57,13 @@ function state_() {
   let gameId = p.getProperty("gameId");
   if (!gameId) { gameId = "g" + Date.now().toString(36); p.setProperty("gameId", gameId); }
   let status = p.getProperty("status") || "idle";
-  const part = Number(p.getProperty("part") || 0), endsAt = Number(p.getProperty("endsAt") || 0);
+  const part = Number(p.getProperty("part") || 0);
   const round = Number(p.getProperty("round") || 0), parts = partsFor_(round);
-  if (status === "running" && endsAt && Date.now() >= endsAt) status = part >= parts ? "ended" : "break";
+  // prayer time stops everything and holds the running part's clock: it reads the same time left until prayer ends
+  const prayer = p.getProperty("prayer") === "1";
+  let endsAt = Number(p.getProperty("endsAt") || 0);
+  if (prayer && status === "running") endsAt = Date.now() + Number(p.getProperty("prayerLeft") || 0);
+  else if (status === "running" && endsAt && Date.now() >= endsAt) status = part >= parts ? "ended" : "break";
   return {
     status: status,
     round: round,
@@ -67,6 +71,7 @@ function state_() {
     parts: parts,
     partMinutes: PART_MINUTES,
     lesson: p.getProperty("lesson") === "1",       // lesson time: everything closed except the extra tasks
+    prayer: prayer,                                // prayer time: everything closed, the part's clock held
     endsAt: endsAt ? new Date(endsAt).toISOString() : "",
     now: new Date().toISOString(),
     gameId: gameId
@@ -76,6 +81,7 @@ function state_() {
 function settle_() {
   const p = PropertiesService.getScriptProperties();
   const endsAt = Number(p.getProperty("endsAt") || 0);
+  if (p.getProperty("prayer") === "1") return;
   if (p.getProperty("status") !== "running" || !endsAt || Date.now() < endsAt) return;
   closePart_(new Date(endsAt));
   p.setProperty("status", Number(p.getProperty("part") || 0) >= partsFor_(Number(p.getProperty("round") || 0)) ? "ended" : "break");
@@ -86,7 +92,7 @@ function closePart_(when) {
 }
 function startPart_(round, part) {
   const now = new Date(), ends = new Date(now.getTime() + PART_MINUTES * 60000);
-  setState_({ status: "running", round: round, part: part, endsAt: ends.getTime() });
+  setState_({ status: "running", round: round, part: part, endsAt: ends.getTime(), prayerLeft: PART_MINUTES * 60000 });
   sheet_("rounds").appendRow([round, now, "", part, ends]);
 }
 function setState_(patch) {
@@ -191,6 +197,14 @@ function control_(d) {
   } else if (d.action === "over") {
     if (st.status === "running") closePart_(now);
     setState_({ status: "over" });
+  } else if (d.action === "prayer") {             // the teacher's prayer button: hold or release the part's clock
+    const p = PropertiesService.getScriptProperties(), on = p.getProperty("prayer") === "1";
+    const running = p.getProperty("status") === "running", endsAt = Number(p.getProperty("endsAt") || 0);
+    if (d.on && !on) setState_({ prayer: "1", prayerLeft: running ? Math.max(0, endsAt - now.getTime()) : 0 });
+    if (!d.on && on) {
+      if (running) setState_({ endsAt: now.getTime() + Number(p.getProperty("prayerLeft") || 0) });
+      setState_({ prayer: "0" });
+    }
   } else if (d.action === "lesson") {             // the teacher's lesson button: on or off
     setState_({ lesson: d.on ? "1" : "0" });
   } else if (d.action === "give") {
@@ -199,7 +213,7 @@ function control_(d) {
     return adjust_(d, st);
   } else if (d.action === "new") {
     clear_("progress"); clear_("log"); clear_("rounds"); clear_("items");
-    setState_({ status: "idle", round: 0, part: 0, endsAt: 0, lesson: "0", gameId: "g" + Date.now().toString(36) });
+    setState_({ status: "idle", round: 0, part: 0, endsAt: 0, lesson: "0", prayer: "0", gameId: "g" + Date.now().toString(36) });
   } else {
     return out_({ error: "bad_action" });
   }
