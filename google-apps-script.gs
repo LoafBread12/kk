@@ -62,6 +62,7 @@ function state_() {
     round: Number(p.getProperty("round") || 0),
     part: part,
     parts: PARTS_PER_ROUND,
+    partMinutes: PART_MINUTES,
     endsAt: endsAt ? new Date(endsAt).toISOString() : "",
     now: new Date().toISOString(),
     gameId: gameId
