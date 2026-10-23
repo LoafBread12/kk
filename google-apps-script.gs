@@ -73,6 +73,7 @@ function state_() {
     part: part,
     parts: parts,
     partMinutes: PART_MINUTES,
+    partsList: PARTS_PER_ROUND,
     lesson: p.getProperty("lesson") === "1",       // lesson time: everything closed except the extra tasks
     prayer: prayer,                                // prayer time: everything closed, the part's clock held
     endsAt: endsAt ? new Date(endsAt).toISOString() : "",
@@ -207,6 +208,11 @@ function control_(d) {
   } else if (d.action === "over") {
     if (st.status === "running") closePart_(now);
     setState_({ status: "over" });
+  } else if (d.action === "goto") {               // fix a mistake: restart from a chosen round and shawt
+    const r = Math.max(1, Math.min(PARTS_PER_ROUND.length, Number(d.round) || 1));
+    const pt = Math.max(1, Math.min(partsFor_(r), Number(d.part) || 1));
+    if (st.status === "running") closePart_(now);
+    startPart_(r, pt);
   } else if (d.action === "prayer") {             // the teacher's prayer button: hold or release the part's clock
     const p = PropertiesService.getScriptProperties(), on = p.getProperty("prayer") === "1";
     const running = p.getProperty("status") === "running", endsAt = Number(p.getProperty("endsAt") || 0);
