@@ -55,6 +55,8 @@ h1{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(28px,5v
 .btn.lesson{color:#fff6e3;background:linear-gradient(180deg,#7b6bd1,#5a48b5 55%,#3f308f)}
 .btn.lesson[aria-pressed="true"]{color:#3a2006;background:linear-gradient(180deg,#ffe9a6,var(--gold) 55%,#d39a2a);box-shadow:0 0 0 3px #fff6e3,0 0 18px rgba(244,195,79,.8)}
 .lesson-note{color:var(--gold)}
+.btn.prayer{color:#fff6e3;background:linear-gradient(180deg,#3fa58a,#1c7a62 55%,#105446)}
+.btn.prayer[aria-pressed="true"]{color:#3a2006;background:linear-gradient(180deg,#ffe9a6,var(--gold) 55%,#d39a2a);box-shadow:0 0 0 3px #fff6e3,0 0 18px rgba(244,195,79,.8)}
 .btn.ghost{color:var(--ink-mut);background:transparent;box-shadow:inset 0 0 0 1px rgba(255,255,255,.3)}
 .panel .btn.ghost{color:var(--ink-dark);box-shadow:inset 0 0 0 1px rgba(58,36,20,.4)}
 .btn.arm{outline:3px solid #fff}
@@ -170,6 +172,7 @@ h1{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(28px,5v
     <button class="btn stop" type="button" id="btnEnd">أنهِ الشوط</button>
     <button class="btn stop" type="button" id="btnEndRound">أنهِ الجولة</button>
     <button class="btn lesson" type="button" id="btnLesson" aria-pressed="false">درس</button>
+    <button class="btn prayer" type="button" id="btnPrayer" aria-pressed="false">الصلاة</button>
     <button class="btn end" type="button" id="btnOver">أنهِ اللعبة وأظهر النتائج</button>
     <button class="btn ghost" type="button" id="btnNew">لعبة جديدة</button>
     <div class="amt" role="group" aria-label="نوع الهدية">
@@ -374,7 +377,15 @@ function renderControls() {
   $("#btnLesson").hidden = s === "over";
   $("#btnLesson").textContent = lesson ? "إنهاء الدرس" : "درس";
   $("#btnLesson").setAttribute("aria-pressed", lesson);
-  if (lesson && s !== "over") {
+  const prayer = !!game.prayer;
+  $("#btnPrayer").hidden = s === "over";
+  $("#btnPrayer").textContent = prayer ? "إنهاء الصلاة" : "الصلاة";
+  $("#btnPrayer").setAttribute("aria-pressed", prayer);
+  if (prayer && s !== "over") {
+    const note = document.createElement("span");
+    note.className = "lesson-note"; note.textContent = " (وقت الصلاة: كل شيء متوقّف والوقت محفوظ)";
+    $("#roundText").append(note);
+  } else if (lesson && s !== "over") {
     const note = document.createElement("span");
     note.className = "lesson-note"; note.textContent = " (وقت الدرس: السقي والمحطات مغلقة، المهام الإضافية مفتوحة)";
     $("#roundText").append(note);
@@ -438,14 +449,16 @@ $("#btnPart").addEventListener("click", () => control("part"));
 $("#btnEnd").addEventListener("click", () => control("end"));
 $("#btnEndRound").addEventListener("click", () => control("endRound"));
 $("#btnLesson").addEventListener("click", () => control("lesson", { on: !game.lesson }));
+$("#btnPrayer").addEventListener("click", () => control("prayer", { on: !game.prayer }));
 
 // countdown of the running part, from the sheet's deadline corrected for this computer's clock
-let skew = 0;
+let skew = 0, loadedAt = Date.now();
 function tickTeacherTimer() {
   const t = $("#tTimer");
   const ends = game.endsAt ? new Date(game.endsAt).getTime() - skew : 0;
   if (game.status !== "running" || !ends) { t.hidden = true; return; }
-  const left = Math.max(0, Math.ceil((ends - Date.now()) / 1000));
+  // during prayer the part's clock is held, so show the time left as of the last update
+  const left = Math.max(0, Math.ceil((ends - (game.prayer ? loadedAt : Date.now())) / 1000));
   t.hidden = false;
   t.textContent = toAr(Math.floor(left / 60)) + ":" + toAr(String(left % 60).padStart(2, "0"));
   t.classList.toggle("low", left <= 60);
@@ -613,7 +626,7 @@ async function load() {
     const data = await (await fetch(URL_, { cache: "no-store" })).json();
     let rows;
     if (Array.isArray(data)) { rows = data; hasRounds = false; }            // older script without rounds
-    else { rows = data.rows || []; game = data.state || game; hasRounds = true; if (game.now) skew = new Date(game.now).getTime() - Date.now(); }
+    else { rows = data.rows || []; game = data.state || game; hasRounds = true; if (game.now) skew = new Date(game.now).getTime() - Date.now(); loadedAt = Date.now(); }
     rows.sort((a, b) => (heightOf(b) - heightOf(a)) || (b.stage - a.stage) || (b.stations - a.stations) || String(a.updated).localeCompare(String(b.updated)));
     lastRows = rows;
     renderCards(rows); renderChart(rows); renderControls();
