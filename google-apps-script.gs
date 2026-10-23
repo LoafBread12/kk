@@ -11,6 +11,9 @@ const TEACHER_PIN = "1234";
 // يبدأ المعلّم كل شوط بنفسه، ويتوقّف السقي تلقائيًا عند انتهاء وقته. الجولات بعد آخر رقم تأخذ آخر رقم.
 const PARTS_PER_ROUND = [4, 2];
 const PART_MINUTES = 15;
+
+// عدد المجموعات. يأخذ كل فريق رقم مجموعته تلقائيًا عند انضمامه: الأول ١، والثاني ٢...، ثم الأقل عددًا.
+const GROUPS = 4;
 const partsFor_ = round => PARTS_PER_ROUND[Math.min(Math.max(1, round), PARTS_PER_ROUND.length) - 1];
 
 const SHEETS = {
@@ -128,7 +131,13 @@ function report_(d) {
   const adj = i >= 0 ? Number(body[i][8]) || 0 : 0;
   const height = round1_(Math.max(0, growth + adj));
   const stage = stageOf_(height);
-  const group = Math.max(0, Math.min(20, Number(d.group) || 0));
+  // the sheet gives each team its group the first time it reports: the group with the fewest teams, lowest first
+  let group = i >= 0 ? Number(body[i][10]) || 0 : 0;
+  if (!group) {
+    const counts = new Array(GROUPS).fill(0);
+    body.forEach(r => { const g = Number(r[10]) || 0; if (g >= 1 && g <= GROUPS) counts[g - 1]++; });
+    group = counts.indexOf(Math.min.apply(null, counts)) + 1;
+  }
   const row = [id, team, stage + 1, STAGE_NAMES[stage], stations, done, now, growth, adj, height, group];
   if (i >= 0) progress.getRange(i + 2, 1, 1, row.length).setValues([row]);
   else progress.appendRow(row);
@@ -242,6 +251,7 @@ function doGet(e) {
     if (id) {
       const r = body_("progress").find(x => String(x[0]) === id);
       st.adj = r ? Number(r[8]) || 0 : 0;
+      st.group = r ? Number(r[10]) || 0 : 0;
       st.items = pendingItems_(id).map(x => ({ key: x.key, kind: x.kind, amount: x.amount }));
     }
     return out_(st);

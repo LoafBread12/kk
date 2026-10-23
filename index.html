@@ -282,11 +282,6 @@ button,input{font:inherit;color:inherit}
 
 
 /* group rotation: the team's station for this shawt lights up, with where to go */
-.groups{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
-.groups button{height:48px;border:0;border-radius:8px;cursor:pointer;font-family:var(--f-display);font-weight:400;font-size:26px;color:var(--ink-dark);
-  background:var(--parch);box-shadow:inset 0 -3px 0 rgba(0,0,0,.15),0 0 0 2px var(--wood-900)}
-.groups button[aria-pressed="true"]{background:var(--gold);color:#3a2006;box-shadow:0 0 0 3px #fff6e3,0 0 14px rgba(244,195,79,.8)}
-.g-label{font-size:13px;font-weight:800;margin:0}
 .assign{margin:0 12px 10px;padding:10px 12px;border-radius:8px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;align-items:center;color:#3a2006;
   background:linear-gradient(180deg,#ffe9a6,var(--gold));box-shadow:0 0 0 2px #fff1bf,0 0 18px rgba(244,195,79,.55)}
 .assign.next{color:var(--ink);background:rgba(0,0,0,.3);box-shadow:inset 0 0 0 1px rgba(244,195,79,.5)}
@@ -467,8 +462,6 @@ button,input{font:inherit;color:inherit}
         <p>اكتبوا اسم الفريق ليعرف المعلّم إلى أين وصلتم.</p>
         <label for="teamName" hidden>اسم الفريق</label>
         <input id="teamName" maxlength="30" autocomplete="off" placeholder="مثال: فريق الياسمين">
-        <p class="g-label" id="groupLabel">اختاروا رقم مجموعتكم</p>
-        <div class="groups" id="groups" role="group" aria-labelledby="groupLabel"></div>
         <button type="submit">ابدأ اللعب</button>
         <p class="join-msg" id="joinMsg" aria-live="polite"></p>
       </div>
@@ -916,7 +909,8 @@ function renderStations() {
   list.querySelectorAll(".station").forEach(li => {
     const st = CONFIG.stations.find(x => x.id === li.dataset.id), steps = stepsOf(st), k = stepsDone(st);
     const a = assignment(), mine = !!a && a.when === "now" && a.st.id === st.id, other = !!a && a.when === "now" && !mine;
-    const done = k >= steps.length, multi = steps.length > 1, wait = !done && roundLocked(st), closed = !done && !wait && (!canAnswer() || other);
+    const noGroup = rotationOn() && !state.group;
+    const done = k >= steps.length, multi = steps.length > 1, wait = !done && roundLocked(st), closed = !done && !wait && (!canAnswer() || other || noGroup);
     li.classList.toggle("mine", mine && !done);
     li.classList.toggle("other", other && !done);
     li.classList.toggle("done", done);
@@ -924,7 +918,7 @@ function renderStations() {
     li.classList.toggle("closed", closed);
     li.querySelector("input").disabled = closed || wait;
     li.querySelector(".st-waitmsg").textContent = wait ? `هذه المحطة تُفتح عندما يبدأ المعلّم الجولة ${toAr(st.round)}.`
-      : closed ? (other && canAnswer() ? `هذه ليست محطتكم في هذا الشوط. محطتكم الآن: ${a.st.name}، ${whereOf(a.st)}.` : closedMsg()) : "";
+      : closed ? (noGroup && canAnswer() ? "ننتظر رقم مجموعتكم من المعلّم، لحظات…" : other && canAnswer() ? `هذه ليست محطتكم في هذا الشوط. محطتكم الآن: ${a.st.name}، ${whereOf(a.st)}.` : closedMsg()) : "";
     li.querySelector(".st-status").innerHTML = done ? CHECK + "فُتح الماء"
       : wait ? LOCK + `تُفتح في الجولة ${toAr(st.round)}`
       : k > 0 ? LOCK + `أُنجزت ${toAr(k)} من ${toAr(steps.length)}، بقيت خطوة`
@@ -1285,15 +1279,13 @@ function showTeam() {
   board.inert = !has;
   $("#teamLabel").hidden = !has;
   $("#teamLabel").textContent = has ? "فريق: " + state.team + (state.group ? "، المجموعة " + toAr(state.group) : "") : "";
-  if (!has) { pickedGroup = 0; renderGroups(); }
   if (!has) setTimeout(() => teamInput.focus({ preventScroll: true }), 50);
 }
 joinEl.addEventListener("submit", e => {
   e.preventDefault();
   const name = teamInput.value.trim().replace(/\s+/g, " ").slice(0, 30);
   if (!name) { $("#joinMsg").textContent = "اكتبوا اسم الفريق أولًا."; teamInput.focus(); return; }
-  if (rotationOn() && !pickedGroup) { $("#joinMsg").textContent = "اختاروا رقم مجموعتكم."; return; }
-  state.team = name; state.group = pickedGroup; teamInput.value = ""; $("#joinMsg").textContent = "";
+  state.team = name; state.group = 0; teamInput.value = ""; $("#joinMsg").textContent = "";
   renderStations();
   save(true); showTeam(); report();
 });
@@ -1302,22 +1294,8 @@ joinEl.addEventListener("submit", e => {
 // Each round the groups share that round's stations and move to the next one every shawt:
 // with 4 stations every group is at a different one; with 2, groups 1-2 and 3-4 swap halfway.
 const GROUPS = CONFIG.groups || 4;
-let pickedGroup = 0;
+// the sheet gives each team its group number when it joins (see pollRound)
 const rotationOn = () => !!CONFIG.reportUrl && GROUPS > 1;
-function renderGroups() {
-  const box = $("#groups");
-  $("#groupLabel").hidden = box.hidden = !rotationOn();
-  if (box.children.length !== GROUPS) {
-    box.textContent = "";
-    for (let g = 1; g <= GROUPS; g++) {
-      const b = document.createElement("button");
-      b.type = "button"; b.dataset.g = g; b.textContent = toAr(g); b.setAttribute("aria-label", "المجموعة " + toAr(g));
-      b.addEventListener("click", () => { pickedGroup = g; renderGroups(); });
-      box.append(b);
-    }
-  }
-  [...box.children].forEach(b => b.setAttribute("aria-pressed", Number(b.dataset.g) === pickedGroup));
-}
 function stationFor(group, r, p) {
   const list = CONFIG.stations.filter(st => (st.round || 1) === r);
   if (!list.length || !group || !p) return null;
@@ -1351,7 +1329,6 @@ function renderAssign() {
   if (a.when === "now" && lastAssignKey && key !== lastAssignKey) toast("اذهبوا إلى " + a.st.name, whereOf(a.st), 4200);
   lastAssignKey = key;
 }
-renderGroups();
 /* ---------- rounds: the teacher starts and ends them; watering only while one is running ---------- */
 // "unknown" until the first answer, so a slow or unreachable sheet never locks the game
 // part: which of the round's parts is on; endsAt: when it stops (device clock, corrected by skew)
@@ -1494,6 +1471,11 @@ async function pollRound() {
     state.gameId = s.gameId; save(true);
   }
   if (Array.isArray(s.items)) syncItems(s.items);
+  if (typeof s.group === "number" && s.group && s.group !== state.group && state.team) {
+    state.group = s.group; save(true);
+    showTeam(); renderStations();
+    toast("رقم مجموعتكم", "المجموعة " + toAr(s.group), 3600);
+  }
   if (typeof s.adj === "number") {
     // items used here that the sheet has not counted yet still belong to this device's height
     const pendingUse = Object.values(inFlight).reduce((a, x) => a + x.amount, 0);
