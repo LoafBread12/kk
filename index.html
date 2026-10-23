@@ -258,6 +258,9 @@ button,input{font:inherit;color:inherit}
 .qp-item.solved{background:rgba(124,195,90,.22);box-shadow:inset 0 0 0 1px rgba(47,107,42,.35)}
 .qp-item.solved .qp-n{background:var(--leaf-deep)}
 .qp-item.solved .qp-row{display:none}
+.qp-closed{display:none;margin:0;padding:6px 10px;border-radius:6px;font-size:13px;font-weight:800;color:#7a5634;background:rgba(122,85,48,.12)}
+.qpanel.closed .qp-closed{display:block}
+.qpanel.closed .qp-row input,.qpanel.closed .qp-row button{opacity:.45;pointer-events:none}
 .qp-done{display:none;font-size:13px;font-weight:800;color:var(--leaf-deep)}
 .qp-item.solved .qp-done{display:block}
 .qp-item.shake{animation:shake .45s}
@@ -314,10 +317,10 @@ button,input{font:inherit;color:inherit}
 .station.done{background:linear-gradient(180deg,#e3f2c8,#bcd998)}
 .station.wait{background:linear-gradient(180deg,#d9d2c2,#bdb3a0)}
 .station.wait .st-ico{filter:grayscale(.8);opacity:.7}
-.station.wait .st-form{display:none}
+.station.wait .st-form,.station.closed .st-form{display:none}
 .st-waitmsg{display:none;margin:0 10px 10px;padding:10px 12px;border-radius:6px;font-size:14px;font-weight:700;color:var(--ink);
   background:var(--grain),linear-gradient(180deg,var(--wood-700),#432612)}
-.station.wait .st-waitmsg{display:block}
+.station.wait .st-waitmsg,.station.closed .st-waitmsg{display:block}
 .station.done .st-ico{background:linear-gradient(160deg,#7cc35a,var(--leaf-deep));color:#fff7d6}
 .station.done .st-status{color:var(--leaf-deep)}
 .station.done .st-form{display:none}
@@ -360,7 +363,7 @@ button,input{font:inherit;color:inherit}
         <span>مهام إضافية</span><span class="q-count" id="qcount">٠ من ٣</span><span class="q-dot" aria-hidden="true"></span>
       </button>
       <div class="qpanel" id="qpanel" hidden>
-        <div class="qp-head"><h3>مهام إضافية</h3><p>كل جواب صحيح يملأ الإبريق كاملًا.</p></div>
+        <div class="qp-head"><h3>مهام إضافية</h3><p>كل جواب صحيح يملأ الإبريق كاملًا.</p><p class="qp-closed" id="qpClosed"></p></div>
         <ol class="qp-list" id="qlist"></ol>
       </div>
     </div>
@@ -787,6 +790,7 @@ CONFIG.stations.forEach((st, i) => {
     e.preventDefault();
     const steps = stepsOf(st), k = stepsDone(st), step = steps[k];
     if (!step || roundLocked(st)) return;
+    if (!canAnswer()) { renderStations(); return; }
     if (!norm2(input.value)) { setMsg(msg, step.code ? "اكتب كلمة السر أولًا." : "اكتبوا الإجابة أولًا.", "bad"); input.focus(); return; }
     const res = matchResult(step, input.value);
     if (res) {
@@ -846,10 +850,13 @@ function renderStations() {
   const n = state.unlocked.length;
   list.querySelectorAll(".station").forEach(li => {
     const st = CONFIG.stations.find(x => x.id === li.dataset.id), steps = stepsOf(st), k = stepsDone(st);
-    const done = k >= steps.length, multi = steps.length > 1, wait = !done && roundLocked(st);
+    const done = k >= steps.length, multi = steps.length > 1, wait = !done && roundLocked(st), closed = !done && !wait && !canAnswer();
     li.classList.toggle("done", done);
     li.classList.toggle("wait", wait);
-    li.querySelector(".st-waitmsg").textContent = wait ? `هذه المحطة تُفتح عندما يبدأ المعلّم الجولة ${toAr(st.round)}.` : "";
+    li.classList.toggle("closed", closed);
+    li.querySelector("input").disabled = closed || wait;
+    li.querySelector(".st-waitmsg").textContent = wait ? `هذه المحطة تُفتح عندما يبدأ المعلّم الجولة ${toAr(st.round)}.`
+      : closed ? closedMsg() : "";
     li.querySelector(".st-status").innerHTML = done ? CHECK + "فُتح الماء"
       : wait ? LOCK + `تُفتح في الجولة ${toAr(st.round)}`
       : k > 0 ? LOCK + `أُنجزت ${toAr(k)} من ${toAr(steps.length)}، بقيت خطوة`
@@ -1223,6 +1230,15 @@ joinEl.addEventListener("submit", e => {
 // part: which of the round's parts is on; endsAt: when it stops (device clock, corrected by skew)
 const round = { status: CONFIG.reportUrl ? "unknown" : "running", n: 0, part: 0, parts: 4, partMin: 15, endsAt: 0, skew: 0 };
 const canWater = () => round.status === "running" || round.status === "unknown";
+const canAnswer = () => !CONFIG.reportUrl || canWater();
+function closedMsg() {
+  return {
+    idle: "لم تبدأ الجولة بعد. اكتبوا الإجابة عندما يبدأ المعلّم الجولة.",
+    break: `انتهى الجزء ${toAr(round.part)}. لا يمكن كتابة الإجابة حتى يبدأ الجزء التالي.`,
+    ended: `انتهت الجولة ${toAr(round.n)}. لا يمكن كتابة الإجابة الآن.`,
+    over: "انتهت اللعبة. لا يمكن كتابة الإجابات."
+  }[round.status] || "لا يمكن كتابة الإجابة الآن.";
+}
 let lastPausedToast = 0;
 function pausedToast() {
   const now = performance.now();
@@ -1233,6 +1249,8 @@ function pausedToast() {
 function renderRound() {
   const p = $("#pause");
   renderTimebox();
+  // answers follow the clock too: closed whenever no part is running
+  if (round.answerOpen !== canAnswer()) { round.answerOpen = canAnswer(); renderStations(); renderQuests(); }
   tickTimer();
   const msg = {
     idle:  ["استعدّوا!", "انتظروا حتى يبدأ المعلّم الجولة."],
@@ -1513,6 +1531,7 @@ QUESTS.forEach((q, i) => {
   form.addEventListener("submit", e => {
     e.preventDefault();
     if (state.quests[q.id]) return;
+    if (!canAnswer()) { renderQuests(); return; }
     if (!norm2(input.value)) { msg.textContent = "اكتبوا الجواب أولًا."; msg.className = "qp-msg bad"; return; }
     if (stepMatches(q, input.value)) {
       state.quests[q.id] = true;
@@ -1532,6 +1551,10 @@ QUESTS.forEach((q, i) => {
   qlist.append(li);
 });
 function renderQuests() {
+  const shut = !canAnswer();
+  qpanel.classList.toggle("closed", shut);
+  $("#qpClosed").textContent = shut ? closedMsg() : "";
+  qlist.querySelectorAll("input").forEach(i => { i.disabled = shut; });
   const n = QUESTS.filter(q => state.quests[q.id]).length;
   $("#qcount").textContent = `${toAr(n)} من ${toAr(QUESTS.length)}`;
   qtab.classList.toggle("all", n === QUESTS.length);
