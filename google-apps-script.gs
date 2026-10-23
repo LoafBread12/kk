@@ -7,9 +7,11 @@
 // رمز المعلّم: تطلبه لوحة المعلّم قبل بدء الجولات أو إنهائها. غيّره إلى رمز تختاره.
 const TEACHER_PIN = "1234";
 
-// كل جولة فيها ٤ أجزاء، وكل جزء ١٥ دقيقة. يبدأ المعلّم كل جزء بنفسه، ويتوقّف السقي تلقائيًا عند انتهاء وقته.
-const PARTS_PER_ROUND = 4;
+// عدد أجزاء كل جولة بالترتيب: الجولة الأولى ٤ أجزاء، والثانية جزءان. وكل جزء ١٥ دقيقة.
+// يبدأ المعلّم كل جزء بنفسه، ويتوقّف السقي تلقائيًا عند انتهاء وقته. الجولات بعد آخر رقم تأخذ آخر رقم.
+const PARTS_PER_ROUND = [4, 2];
 const PART_MINUTES = 15;
+const partsFor_ = round => PARTS_PER_ROUND[Math.min(Math.max(1, round), PARTS_PER_ROUND.length) - 1];
 
 const SHEETS = {
   progress: { name: "التقدم", headers: ["الجهاز", "الفريق", "المرحلة", "اسم المرحلة", "المحطات المفتوحة", "انتهى", "آخر تحديث", "النمو بالسقي (سم)", "تعديل المعلّم (سم)", "الطول (سم)"] },
@@ -56,12 +58,13 @@ function state_() {
   if (!gameId) { gameId = "g" + Date.now().toString(36); p.setProperty("gameId", gameId); }
   let status = p.getProperty("status") || "idle";
   const part = Number(p.getProperty("part") || 0), endsAt = Number(p.getProperty("endsAt") || 0);
-  if (status === "running" && endsAt && Date.now() >= endsAt) status = part >= PARTS_PER_ROUND ? "ended" : "break";
+  const round = Number(p.getProperty("round") || 0), parts = partsFor_(round);
+  if (status === "running" && endsAt && Date.now() >= endsAt) status = part >= parts ? "ended" : "break";
   return {
     status: status,
-    round: Number(p.getProperty("round") || 0),
+    round: round,
     part: part,
-    parts: PARTS_PER_ROUND,
+    parts: parts,
     partMinutes: PART_MINUTES,
     endsAt: endsAt ? new Date(endsAt).toISOString() : "",
     now: new Date().toISOString(),
@@ -74,7 +77,7 @@ function settle_() {
   const endsAt = Number(p.getProperty("endsAt") || 0);
   if (p.getProperty("status") !== "running" || !endsAt || Date.now() < endsAt) return;
   closePart_(new Date(endsAt));
-  p.setProperty("status", Number(p.getProperty("part") || 0) >= PARTS_PER_ROUND ? "ended" : "break");
+  p.setProperty("status", Number(p.getProperty("part") || 0) >= partsFor_(Number(p.getProperty("round") || 0)) ? "ended" : "break");
 }
 function closePart_(when) {
   const sh = sheet_("rounds"), n = sh.getLastRow();
@@ -178,9 +181,9 @@ function control_(d) {
   if (d.action === "start") {                       // a new round, from its first part
     if (st.status === "idle" || st.status === "ended") startPart_(st.round + 1, 1);
   } else if (d.action === "part") {                 // the next part of the current round
-    if (st.status === "break" && st.part < PARTS_PER_ROUND) startPart_(st.round, st.part + 1);
+    if (st.status === "break" && st.part < st.parts) startPart_(st.round, st.part + 1);
   } else if (d.action === "end") {                  // end the running part early
-    if (st.status === "running") { closePart_(now); setState_({ status: st.part >= PARTS_PER_ROUND ? "ended" : "break", endsAt: now.getTime() }); }
+    if (st.status === "running") { closePart_(now); setState_({ status: st.part >= st.parts ? "ended" : "break", endsAt: now.getTime() }); }
   } else if (d.action === "endRound") {             // end the whole round now
     if (st.status === "running") closePart_(now);
     if (st.status === "running" || st.status === "break") setState_({ status: "ended", endsAt: now.getTime() });
