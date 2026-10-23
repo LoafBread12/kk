@@ -189,12 +189,21 @@ button,input{font:inherit;color:inherit}
 .tb-head{align-self:end}
 .tb-round{margin:0;font-family:var(--f-display);font-weight:400;font-size:24px;line-height:1.1;color:var(--gold)}
 .tb-status{margin:2px 0 0;font-size:13px;font-weight:700;color:var(--ink-mut);line-height:1.35}
-.tb-parts{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,1fr);gap:5px;align-self:start}
+.tb-parts{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(var(--n,4),1fr);gap:5px;align-self:start}
 .tb-parts li{display:grid;justify-items:center;gap:2px;padding:4px 0 3px;border-radius:6px;font-size:11px;font-weight:800;color:rgba(255,246,227,.5);
   background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.1)}
 .tb-parts li b{font-family:var(--f-display);font-weight:400;font-size:18px;line-height:1}
 .tb-parts li.done{color:#e3f2c8;background:rgba(109,187,79,.3);box-shadow:inset 0 0 0 1px rgba(168,224,138,.45)}
 .tb-parts li.now{color:#3a2006;background:var(--gold);box-shadow:0 0 12px rgba(244,195,79,.6)}
+.tb-parts li .tb-state,.tb-parts li .tb-bar{display:none}
+/* with only a few parts each tile gets the room to say where it stands, and the running one shows its progress */
+.tb-parts.wide{gap:8px}
+.tb-parts.wide li{grid-template-columns:auto minmax(0,1fr);justify-items:start;align-items:center;column-gap:8px;row-gap:3px;padding:6px 10px;text-align:start}
+.tb-parts.wide li b{grid-row:span 2;font-size:28px}
+.tb-parts.wide li > span:not(.tb-state):not(.tb-bar){font-size:12px}
+.tb-parts.wide li .tb-state{display:block;font-size:12px;line-height:1.1}
+.tb-parts.wide li.now .tb-bar{display:block;grid-column:1 / -1;width:100%;height:5px;border-radius:5px;background:rgba(58,36,20,.25);overflow:hidden}
+.tb-parts.wide li.now .tb-bar i{display:block;height:100%;width:0;background:#3a2006;border-radius:5px;transition:width .5s linear}
 .join{position:absolute;inset:0;z-index:8;display:grid;place-items:center;padding:16px;background:rgba(8,24,36,.55);backdrop-filter:blur(2px)}
 .join-card{width:min(100%,380px);display:grid;gap:10px;padding:18px 20px 16px;border-radius:10px;text-align:center;
   background:var(--grain),linear-gradient(180deg,var(--wood-300),var(--wood-500) 45%,var(--wood-700));
@@ -1252,9 +1261,11 @@ function renderTimebox() {
   }[st] || "";
   if (tbParts.children.length !== P) {
     tbParts.textContent = "";
+    tbParts.style.setProperty("--n", P);
+    tbParts.classList.toggle("wide", P <= 2);
     for (let i = 1; i <= P; i++) {
       const li = document.createElement("li");
-      li.innerHTML = `<b>${toAr(i)}</b><span>الجزء</span>`;
+      li.innerHTML = `<b>${toAr(i)}</b><span>الجزء</span><span class="tb-state"></span><span class="tb-bar"><i></i></span>`;
       tbParts.append(li);
     }
   }
@@ -1263,6 +1274,7 @@ function renderTimebox() {
     const done = k < part || (k === part && st !== "running") || st === "ended" || st === "over";
     li.classList.toggle("done", n > 0 && done);
     li.classList.toggle("now", st === "running" && k === part);
+    li.querySelector(".tb-state").textContent = st === "running" && k === part ? "الآن" : n > 0 && done ? "انتهى ✓" : "قادم";
   });
   tbox.classList.toggle("paused", st !== "running");
   if (st !== "running") {
@@ -1284,7 +1296,10 @@ function tickTimer() {
   const txt = fmtClock(left);
   if (txt !== lastTimerTxt) {
     $("#tbTime").textContent = txt; lastTimerTxt = txt;
-    $("#tbArc").style.strokeDashoffset = String(100 - Math.min(100, left / (round.partMin * 60) * 100));
+    const used = 100 - Math.min(100, left / (round.partMin * 60) * 100);
+    $("#tbArc").style.strokeDashoffset = String(used);
+    const bar = tbParts.querySelector("li.now .tb-bar i");
+    if (bar) bar.style.width = used + "%";
   }
   tbox.classList.toggle("low", left <= 60);
 }
