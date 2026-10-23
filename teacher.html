@@ -52,6 +52,9 @@ h1{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(28px,5v
 .btn.go{color:#0f2d0c;background:linear-gradient(180deg,#c9f0b0,var(--leaf) 55%,#4c9a35)}
 .btn.stop{color:#3a2006;background:linear-gradient(180deg,#ffe9a6,var(--gold) 55%,#d39a2a)}
 .btn.end{color:#fff;background:linear-gradient(180deg,#e9735f,#c0392b 55%,#8e2a1f)}
+.btn.lesson{color:#fff6e3;background:linear-gradient(180deg,#7b6bd1,#5a48b5 55%,#3f308f)}
+.btn.lesson[aria-pressed="true"]{color:#3a2006;background:linear-gradient(180deg,#ffe9a6,var(--gold) 55%,#d39a2a);box-shadow:0 0 0 3px #fff6e3,0 0 18px rgba(244,195,79,.8)}
+.lesson-note{color:var(--gold)}
 .btn.ghost{color:var(--ink-mut);background:transparent;box-shadow:inset 0 0 0 1px rgba(255,255,255,.3)}
 .panel .btn.ghost{color:var(--ink-dark);box-shadow:inset 0 0 0 1px rgba(58,36,20,.4)}
 .btn.arm{outline:3px solid #fff}
@@ -166,6 +169,7 @@ h1{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(28px,5v
     <button class="btn go" type="button" id="btnPart">ابدأ الشوط ٢</button>
     <button class="btn stop" type="button" id="btnEnd">أنهِ الشوط</button>
     <button class="btn stop" type="button" id="btnEndRound">أنهِ الجولة</button>
+    <button class="btn lesson" type="button" id="btnLesson" aria-pressed="false">درس</button>
     <button class="btn end" type="button" id="btnOver">أنهِ اللعبة وأظهر النتائج</button>
     <button class="btn ghost" type="button" id="btnNew">لعبة جديدة</button>
     <div class="amt" role="group" aria-label="نوع الهدية">
@@ -366,6 +370,15 @@ function renderControls() {
   $("#btnPart").hidden = !(s === "break" && part < P);
   $("#btnEnd").hidden = s !== "running";
   $("#btnEndRound").hidden = !(s === "running" || s === "break");
+  const lesson = !!game.lesson;
+  $("#btnLesson").hidden = s === "over";
+  $("#btnLesson").textContent = lesson ? "إنهاء الدرس" : "درس";
+  $("#btnLesson").setAttribute("aria-pressed", lesson);
+  if (lesson && s !== "over") {
+    const note = document.createElement("span");
+    note.className = "lesson-note"; note.textContent = " (وقت الدرس: السقي والمحطات مغلقة، المهام الإضافية مفتوحة)";
+    $("#roundText").append(note);
+  }
   tickTeacherTimer();
   $("#btnOver").hidden = s === "over" || n === 0;
   $("#tabReplay").hidden = s !== "over";
@@ -424,6 +437,7 @@ $("#btnStart").addEventListener("click", () => control("start"));
 $("#btnPart").addEventListener("click", () => control("part"));
 $("#btnEnd").addEventListener("click", () => control("end"));
 $("#btnEndRound").addEventListener("click", () => control("endRound"));
+$("#btnLesson").addEventListener("click", () => control("lesson", { on: !game.lesson }));
 
 // countdown of the running part, from the sheet's deadline corrected for this computer's clock
 let skew = 0;

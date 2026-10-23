@@ -218,7 +218,7 @@ button,input{font:inherit;color:inherit}
 
 
 /* side questions: a small hanging sign at the top left that unrolls into a scroll */
-.quests{position:absolute;top:0;left:18px;z-index:7;display:grid;justify-items:start}
+.quests{position:absolute;top:0;left:18px;z-index:8;display:grid;justify-items:end}
 .qtab{position:relative;margin-top:14px;display:flex;align-items:center;gap:7px;padding:5px 10px 5px 8px;border:0;border-radius:8px;cursor:pointer;
   color:var(--ink-dark);font-weight:800;font-size:14px;line-height:1.1;transform-origin:50% -14px;animation:sway 4s ease-in-out infinite;
   background:var(--grain),linear-gradient(180deg,#e9cf98,#cfa968);box-shadow:0 0 0 2px var(--wood-700),inset 0 1px 0 rgba(255,255,255,.6),0 4px 8px rgba(0,0,0,.35)}
@@ -228,6 +228,8 @@ button,input{font:inherit;color:inherit}
 .qtab svg{width:22px;height:22px;flex:none}
 .qtab .q-count{font-variant-numeric:tabular-nums;font-size:12px;background:var(--wood-700);color:#ffe9a6;border-radius:10px;padding:1px 7px}
 .qtab.all .q-count{background:var(--leaf-deep);color:#e3f2c8}
+.qtab.lesson{animation:sway 4s ease-in-out infinite,lessonGlow 1.4s ease-in-out infinite}
+@keyframes lessonGlow{50%{box-shadow:0 0 0 2px var(--wood-700),0 0 0 6px rgba(244,195,79,.55),0 0 26px rgba(244,195,79,.9)}}
 .qtab .q-dot{position:absolute;top:-4px;right:-4px;width:10px;height:10px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 2px var(--wood-700);animation:qdot 1.6s ease-in-out infinite}
 .qtab.all .q-dot{display:none}
 .quests.open .qtab{animation:none}
@@ -1228,10 +1230,13 @@ joinEl.addEventListener("submit", e => {
 /* ---------- rounds: the teacher starts and ends them; watering only while one is running ---------- */
 // "unknown" until the first answer, so a slow or unreachable sheet never locks the game
 // part: which of the round's parts is on; endsAt: when it stops (device clock, corrected by skew)
-const round = { status: CONFIG.reportUrl ? "unknown" : "running", n: 0, part: 0, parts: 4, partMin: 15, endsAt: 0, skew: 0 };
-const canWater = () => round.status === "running" || round.status === "unknown";
+const round = { status: CONFIG.reportUrl ? "unknown" : "running", n: 0, part: 0, parts: 4, partMin: 15, endsAt: 0, skew: 0, lesson: false };
+// lesson time (the teacher's «درس» button) closes watering, stations and gifts; only the extra tasks stay open
+const canWater = () => (round.status === "running" || round.status === "unknown") && !round.lesson;
 const canAnswer = () => !CONFIG.reportUrl || canWater();
+const canQuest = () => !CONFIG.reportUrl || round.lesson || canWater();
 function closedMsg() {
+  if (round.lesson) return "وقت الدرس. المحطات مغلقة حتى ينتهي الدرس، ويمكنكم حلّ المهام الإضافية.";
   return {
     idle: "لم تبدأ الجولة بعد. اكتبوا الإجابة عندما يبدأ المعلّم الجولة.",
     break: `انتهى الشوط ${toAr(round.part)}. لا يمكن كتابة الإجابة حتى يبدأ الشوط التالي.`,
@@ -1244,15 +1249,20 @@ function pausedToast() {
   const now = performance.now();
   if (now - lastPausedToast < 2500) return;
   lastPausedToast = now;
+  if (round.lesson) { toast("وقت الدرس", "السقي متوقّف حتى ينتهي الدرس"); return; }
   toast("السقي متوقّف", round.status === "over" ? "انتهت اللعبة" : round.status === "break" ? "انتظروا الشوط التالي" : "انتظروا بدء الجولة");
 }
 function renderRound() {
   const p = $("#pause");
   renderTimebox();
   // answers follow the clock too: closed whenever no part is running
-  if (round.answerOpen !== canAnswer()) { round.answerOpen = canAnswer(); renderStations(); renderQuests(); }
+  const openKey = canAnswer() + "|" + canQuest() + "|" + round.lesson;
+  if (round.answerOpen !== openKey) { round.answerOpen = openKey; renderStations(); renderQuests(); }
+  qtab.classList.toggle("lesson", round.lesson && !qtab.classList.contains("all"));
   tickTimer();
-  const msg = {
+  const msg = round.lesson && round.status !== "over"
+    ? ["وقت الدرس", "استمعوا إلى المعلّم. السقي والمحطات متوقّفة الآن، ويمكنكم حلّ المهام الإضافية من الشريط أعلى اليسار."]
+    : {
     idle:  ["استعدّوا!", "انتظروا حتى يبدأ المعلّم الجولة."],
     break: ["انتهى الشوط " + toAr(round.part), "توقّف السقي. انتظروا المعلّم ليبدأ الشوط " + toAr(round.part + 1) + " من الجولة " + toAr(round.n) + "."],
     ended: ["انتهت الجولة " + toAr(round.n), "توقّف السقي. انتظروا الجولة التالية."],
@@ -1271,7 +1281,7 @@ function renderTimebox() {
   tbox.hidden = !CONFIG.reportUrl || round.status === "unknown";
   const st = round.status, n = round.n, part = round.part, P = round.parts;
   $("#tbRound").textContent = n ? "الجولة " + toAr(n) : "الجولات";
-  $("#tbStatus").textContent = {
+  $("#tbStatus").textContent = round.lesson && st !== "over" ? "وقت الدرس. المهام الإضافية فقط مفتوحة." : {
     idle: "انتظروا حتى يبدأ المعلّم الجولة الأولى.",
     running: `الشوط ${toAr(part)} من ${toAr(P)}، اسقوا الآن!`,
     break: `انتهى الشوط ${toAr(part)}. انتظروا المعلّم ليبدأ الشوط ${toAr(part + 1)}.`,
@@ -1354,6 +1364,12 @@ async function pollRound() {
   const was = round.status;
   const wasN = round.n;
   const wasPart = round.part;
+  const wasLesson = round.lesson;
+  round.lesson = !!s.lesson;
+  if (round.lesson !== wasLesson && was !== "unknown") {
+    if (round.lesson) toast("وقت الدرس", "استمعوا إلى المعلّم، والمهام الإضافية مفتوحة", 3400);
+    else toast("انتهى الدرس", canWater() ? "عودوا إلى السقي والمحطات!" : "انتظروا المعلّم", 3000);
+  }
   round.status = s.status; round.n = Number(s.round) || 0;
   round.part = Number(s.part) || 0; round.parts = Number(s.parts) || 4; round.partMin = Number(s.partMinutes) || 15;
   if (s.now) round.skew = new Date(s.now).getTime() - Date.now();
@@ -1531,7 +1547,7 @@ QUESTS.forEach((q, i) => {
   form.addEventListener("submit", e => {
     e.preventDefault();
     if (state.quests[q.id]) return;
-    if (!canAnswer()) { renderQuests(); return; }
+    if (!canQuest()) { renderQuests(); return; }
     if (!norm2(input.value)) { msg.textContent = "اكتبوا الجواب أولًا."; msg.className = "qp-msg bad"; return; }
     if (stepMatches(q, input.value)) {
       state.quests[q.id] = true;
@@ -1551,7 +1567,7 @@ QUESTS.forEach((q, i) => {
   qlist.append(li);
 });
 function renderQuests() {
-  const shut = !canAnswer();
+  const shut = !canQuest();
   qpanel.classList.toggle("closed", shut);
   $("#qpClosed").textContent = shut ? closedMsg() : "";
   qlist.querySelectorAll("input").forEach(i => { i.disabled = shut; });

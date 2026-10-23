@@ -66,6 +66,7 @@ function state_() {
     part: part,
     parts: parts,
     partMinutes: PART_MINUTES,
+    lesson: p.getProperty("lesson") === "1",       // lesson time: everything closed except the extra tasks
     endsAt: endsAt ? new Date(endsAt).toISOString() : "",
     now: new Date().toISOString(),
     gameId: gameId
@@ -190,13 +191,15 @@ function control_(d) {
   } else if (d.action === "over") {
     if (st.status === "running") closePart_(now);
     setState_({ status: "over" });
+  } else if (d.action === "lesson") {             // the teacher's lesson button: on or off
+    setState_({ lesson: d.on ? "1" : "0" });
   } else if (d.action === "give") {
     return give_(d);
   } else if (d.action === "adjust") {
     return adjust_(d, st);
   } else if (d.action === "new") {
     clear_("progress"); clear_("log"); clear_("rounds"); clear_("items");
-    setState_({ status: "idle", round: 0, part: 0, endsAt: 0, gameId: "g" + Date.now().toString(36) });
+    setState_({ status: "idle", round: 0, part: 0, endsAt: 0, lesson: "0", gameId: "g" + Date.now().toString(36) });
   } else {
     return out_({ error: "bad_action" });
   }
