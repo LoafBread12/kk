@@ -163,8 +163,8 @@ h1{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(28px,5v
   <div class="controls" id="controls" hidden>
     <div class="r-status"><span class="dot" id="dot"></span><span id="roundText">لم تبدأ أي جولة</span><span class="t-timer" id="tTimer" hidden></span></div>
     <button class="btn go" type="button" id="btnStart">ابدأ الجولة ١</button>
-    <button class="btn go" type="button" id="btnPart">ابدأ الجزء ٢</button>
-    <button class="btn stop" type="button" id="btnEnd">أنهِ الجزء</button>
+    <button class="btn go" type="button" id="btnPart">ابدأ الشوط ٢</button>
+    <button class="btn stop" type="button" id="btnEnd">أنهِ الشوط</button>
     <button class="btn stop" type="button" id="btnEndRound">أنهِ الجولة</button>
     <button class="btn end" type="button" id="btnOver">أنهِ اللعبة وأظهر النتائج</button>
     <button class="btn ghost" type="button" id="btnNew">لعبة جديدة</button>
@@ -349,8 +349,8 @@ function renderChart(rows) {
 /* ---------- round controls ---------- */
 const STATUS_TEXT = {
   idle: () => "لم تبدأ أي جولة بعد",
-  running: (n, p, P) => `الجولة ${toAr(n)}، الجزء ${toAr(p)} من ${toAr(P)} جارٍ`,
-  break: (n, p, P) => `انتهى الجزء ${toAr(p)} من ${toAr(P)} في الجولة ${toAr(n)}، السقي متوقّف`,
+  running: (n, p, P) => `الجولة ${toAr(n)}، الشوط ${toAr(p)} من ${toAr(P)} جارٍ`,
+  break: (n, p, P) => `انتهى الشوط ${toAr(p)} من ${toAr(P)} في الجولة ${toAr(n)}، السقي متوقّف`,
   ended: n => `انتهت الجولة ${toAr(n)}، السقي متوقّف`,
   over: n => `انتهت اللعبة بعد ${toAr(n)} ${n === 1 ? "جولة" : "جولات"}`
 };
@@ -362,7 +362,7 @@ function renderControls() {
   $("#roundText").textContent = (STATUS_TEXT[s] || STATUS_TEXT.idle)(n, part, P);
   $("#btnStart").textContent = "ابدأ الجولة " + toAr(n + 1);
   $("#btnStart").hidden = !(s === "idle" || s === "ended");
-  $("#btnPart").textContent = `ابدأ الجزء ${toAr(part + 1)} من ${toAr(P)}`;
+  $("#btnPart").textContent = `ابدأ الشوط ${toAr(part + 1)} من ${toAr(P)}`;
   $("#btnPart").hidden = !(s === "break" && part < P);
   $("#btnEnd").hidden = s !== "running";
   $("#btnEndRound").hidden = !(s === "running" || s === "break");
@@ -484,7 +484,7 @@ function drawTimeline() {
   rp.rounds.forEach(r => {
     const seg = el("div", "seg"); seg.style.flex = String(Math.max(r.v1 - r.v0, rp.total * .06));
     const fill = el("div", "fill"); r.fillEl = fill;
-    seg.append(fill, el("span", null, r.part > 1 ? "الجزء " + toAr(r.part) : "الجولة " + toAr(r.n)));
+    seg.append(fill, el("span", null, r.part > 1 ? "الشوط " + toAr(r.part) : "الجولة " + toAr(r.n)));
     if (r.part === 1) seg.style.marginInlineStart = r.v0 ? "8px" : "0";
     tl.append(seg);
   });
@@ -506,9 +506,9 @@ function drawRace() {
 
 function frame(p) {
   const cur = rp.rounds.find(r => p <= r.v1) || rp.rounds[rp.rounds.length - 1];
-  $("#rpRound").textContent = "الجولة " + toAr(cur.n) + "، الجزء " + toAr(cur.part);
+  $("#rpRound").textContent = "الجولة " + toAr(cur.n) + "، الشوط " + toAr(cur.part);
   const secs = Math.max(0, Math.round((Math.min(p, cur.v1) - cur.v0) / 1000));
-  $("#rpClock").textContent = `الوقت في الجزء: \u2066${toAr(Math.floor(secs / 60))}:${toAr(String(secs % 60).padStart(2, "0"))}\u2069`;
+  $("#rpClock").textContent = `الوقت في الشوط: \u2066${toAr(Math.floor(secs / 60))}:${toAr(String(secs % 60).padStart(2, "0"))}\u2069`;
   rp.rounds.forEach(r => { r.fillEl.style.width = Math.max(0, Math.min(1, (p - r.v0) / (r.v1 - r.v0))) * 100 + "%"; });
   const vals = rp.teams.map(tm => ({ tm, ...rp.at(tm, p) }));
   vals.sort((a, b) => (b.s - a.s) || (b.d - a.d) || a.tm.team.localeCompare(b.tm.team, "ar"));

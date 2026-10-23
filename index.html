@@ -467,7 +467,7 @@ button,input{font:inherit;color:inherit}
         <span class="tb-time" id="tbTime">١٥:٠٠</span>
       </div>
       <div class="tb-head"><p class="tb-round" id="tbRound">الجولة ١</p><p class="tb-status" id="tbStatus" aria-live="polite"></p></div>
-      <ol class="tb-parts" id="tbParts" aria-label="أجزاء الجولة"></ol>
+      <ol class="tb-parts" id="tbParts" aria-label="أشواط الجولة"></ol>
     </section>
     <div class="b-foot"><button class="reset" id="reset" type="button">بدء من جديد</button></div>
   </aside>
@@ -1234,7 +1234,7 @@ const canAnswer = () => !CONFIG.reportUrl || canWater();
 function closedMsg() {
   return {
     idle: "لم تبدأ الجولة بعد. اكتبوا الإجابة عندما يبدأ المعلّم الجولة.",
-    break: `انتهى الجزء ${toAr(round.part)}. لا يمكن كتابة الإجابة حتى يبدأ الجزء التالي.`,
+    break: `انتهى الشوط ${toAr(round.part)}. لا يمكن كتابة الإجابة حتى يبدأ الشوط التالي.`,
     ended: `انتهت الجولة ${toAr(round.n)}. لا يمكن كتابة الإجابة الآن.`,
     over: "انتهت اللعبة. لا يمكن كتابة الإجابات."
   }[round.status] || "لا يمكن كتابة الإجابة الآن.";
@@ -1244,7 +1244,7 @@ function pausedToast() {
   const now = performance.now();
   if (now - lastPausedToast < 2500) return;
   lastPausedToast = now;
-  toast("السقي متوقّف", round.status === "over" ? "انتهت اللعبة" : round.status === "break" ? "انتظروا الجزء التالي" : "انتظروا بدء الجولة");
+  toast("السقي متوقّف", round.status === "over" ? "انتهت اللعبة" : round.status === "break" ? "انتظروا الشوط التالي" : "انتظروا بدء الجولة");
 }
 function renderRound() {
   const p = $("#pause");
@@ -1254,7 +1254,7 @@ function renderRound() {
   tickTimer();
   const msg = {
     idle:  ["استعدّوا!", "انتظروا حتى يبدأ المعلّم الجولة."],
-    break: ["انتهى الجزء " + toAr(round.part), "توقّف السقي. انتظروا المعلّم ليبدأ الجزء " + toAr(round.part + 1) + " من الجولة " + toAr(round.n) + "."],
+    break: ["انتهى الشوط " + toAr(round.part), "توقّف السقي. انتظروا المعلّم ليبدأ الشوط " + toAr(round.part + 1) + " من الجولة " + toAr(round.n) + "."],
     ended: ["انتهت الجولة " + toAr(round.n), "توقّف السقي. انتظروا الجولة التالية."],
     over:  ["انتهت اللعبة", "أحسنتم! انظروا إلى النتائج مع المعلّم."]
   }[round.status];
@@ -1273,8 +1273,8 @@ function renderTimebox() {
   $("#tbRound").textContent = n ? "الجولة " + toAr(n) : "الجولات";
   $("#tbStatus").textContent = {
     idle: "انتظروا حتى يبدأ المعلّم الجولة الأولى.",
-    running: `الجزء ${toAr(part)} من ${toAr(P)}، اسقوا الآن!`,
-    break: `انتهى الجزء ${toAr(part)}. انتظروا المعلّم ليبدأ الجزء ${toAr(part + 1)}.`,
+    running: `الشوط ${toAr(part)} من ${toAr(P)}، اسقوا الآن!`,
+    break: `انتهى الشوط ${toAr(part)}. انتظروا المعلّم ليبدأ الشوط ${toAr(part + 1)}.`,
     ended: `انتهت الجولة ${toAr(n)}. انتظروا الجولة التالية.`,
     over: "انتهت اللعبة. أحسنتم!"
   }[st] || "";
@@ -1284,7 +1284,7 @@ function renderTimebox() {
     tbParts.classList.toggle("wide", P <= 2);
     for (let i = 1; i <= P; i++) {
       const li = document.createElement("li");
-      li.innerHTML = `<b>${toAr(i)}</b><span>الجزء</span><span class="tb-state"></span><span class="tb-bar"><i></i></span>`;
+      li.innerHTML = `<b>${toAr(i)}</b><span>الشوط</span><span class="tb-state"></span><span class="tb-bar"><i></i></span>`;
       tbParts.append(li);
     }
   }
@@ -1309,7 +1309,7 @@ function tickTimer() {
   if (left === 0) {
     round.status = round.part >= round.parts ? "ended" : "break";
     renderRound();
-    toast("انتهى الوقت!", "انتهى الجزء " + toAr(round.part), 3000);
+    toast("انتهى الوقت!", "انتهى الشوط " + toAr(round.part), 3000);
     return;
   }
   const txt = fmtClock(left);
@@ -1365,9 +1365,9 @@ async function pollRound() {
   }
   renderRound();
   if (was !== "unknown" && was !== round.status) {
-    if (round.status === "running") toast(round.part > 1 ? "بدأ الجزء " + toAr(round.part) + " من الجولة " + toAr(round.n) : "بدأت الجولة " + toAr(round.n), "هيا اسقوا البذرة!");
+    if (round.status === "running") toast(round.part > 1 ? "بدأ الشوط " + toAr(round.part) + " من الجولة " + toAr(round.n) : "بدأت الجولة " + toAr(round.n), "هيا اسقوا البذرة!");
   } else if (round.status === "running" && round.part !== wasPart && wasPart) {
-    toast("بدأ الجزء " + toAr(round.part) + " من الجولة " + toAr(round.n), "هيا اسقوا البذرة!");
+    toast("بدأ الشوط " + toAr(round.part) + " من الجولة " + toAr(round.n), "هيا اسقوا البذرة!");
   }
 }
 
