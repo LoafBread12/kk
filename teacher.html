@@ -62,6 +62,14 @@ h1{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(28px,5v
 .btn.arm{outline:3px solid #fff}
 .btn:disabled{opacity:.45;cursor:not-allowed}
 .btn:active:not(:disabled){transform:translateY(2px)}
+.fix{width:100%;border-top:1px solid rgba(255,255,255,.15);padding-top:8px}
+.fix summary{cursor:pointer;font-weight:800;font-size:14px;color:var(--ink-mut);list-style:none;display:flex;align-items:center;gap:6px}
+.fix summary::-webkit-details-marker{display:none}
+.fix summary::before{content:"↺";font-size:16px;color:var(--gold)}
+.fix[open] summary{color:var(--ink)}
+.fix-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px;font-weight:800}
+.fix-row select{height:38px;border-radius:6px;border:2px solid var(--wood-900);background:var(--parch);color:var(--ink-dark);font:inherit;font-weight:800;padding:0 8px}
+.fix-note{margin:6px 0 0;font-size:13px;font-weight:600;color:var(--ink-mut)}
 .pin{display:flex;flex-wrap:wrap;align-items:center;gap:8px;width:100%;padding-top:8px;border-top:1px solid rgba(255,255,255,.15)}
 .pin label{font-weight:800}
 .pin input{width:120px;height:38px;border-radius:6px;border:2px solid var(--wood-900);background:var(--parch);color:var(--ink-dark);font-size:18px;font-weight:800;text-align:center;letter-spacing:3px}
@@ -187,6 +195,15 @@ h1{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(28px,5v
       <button type="button" data-amt="50" aria-pressed="false">٥٠ سم</button>
       <button type="button" data-amt="100" aria-pressed="false">١ م</button>
     </div>
+    <details class="fix" id="fix">
+      <summary>تصحيح خطأ: الرجوع إلى جولة أو شوط</summary>
+      <div class="fix-row">
+        <label for="fixRound">الجولة</label><select id="fixRound"></select>
+        <label for="fixPart">الشوط</label><select id="fixPart"></select>
+        <button class="btn stop" type="button" id="btnGoto">انتقل وابدأ هذا الشوط</button>
+      </div>
+      <p class="fix-note">يبدأ الشوط المختار من جديد بوقته الكامل. لا يتغيّر تقدّم الفرق ولا ماؤها ولا طول نباتاتها.</p>
+    </details>
     <form class="pin" id="pinForm" hidden>
       <label for="pinInput">رمز المعلّم</label>
       <input id="pinInput" inputmode="numeric" autocomplete="off">
@@ -440,7 +457,7 @@ $("#pinForm").addEventListener("submit", e => {
   if (a) control(a[0], a[1]);
 });
 // two taps for the actions that cannot be undone
-function twoTap(btn, label, confirmLabel, action) {
+function twoTap(btn, label, confirmLabel, action, extra) {
   let t = 0;
   btn.addEventListener("click", () => {
     if (!btn.classList.contains("arm")) {
@@ -449,7 +466,7 @@ function twoTap(btn, label, confirmLabel, action) {
       return;
     }
     clearTimeout(t); btn.classList.remove("arm"); btn.textContent = label;
-    control(action);
+    control(action, extra ? extra() : undefined);
   });
 }
 function adjust(r, delta, btn) {
@@ -460,6 +477,24 @@ $("#btnStart").addEventListener("click", () => control("start"));
 $("#btnPart").addEventListener("click", () => control("part"));
 $("#btnEnd").addEventListener("click", () => control("end"));
 $("#btnEndRound").addEventListener("click", () => control("endRound"));
+// fix a mistake: jump back (or forward) to any round and shawt
+function fillFix() {
+  const list = game.partsList || [4, 2], rSel = $("#fixRound"), pSel = $("#fixPart");
+  if (rSel.options.length !== list.length) {
+    rSel.textContent = "";
+    list.forEach((_, i) => rSel.append(new Option("الجولة " + toAr(i + 1), i + 1)));
+    rSel.value = String(Math.max(1, Math.min(list.length, game.round || 1)));
+  }
+  const n = list[Number(rSel.value) - 1] || 1, keep = Number(pSel.value) || game.part || 1;
+  if (pSel.options.length !== n) {
+    pSel.textContent = "";
+    for (let i = 1; i <= n; i++) pSel.append(new Option("الشوط " + toAr(i), i));
+    pSel.value = String(Math.min(n, keep));
+  }
+}
+$("#fixRound").addEventListener("change", () => { $("#fixPart").textContent = ""; fillFix(); });
+$("#fix").addEventListener("toggle", () => { if ($("#fix").open) { $("#fixRound").textContent = ""; $("#fixPart").textContent = ""; fillFix(); } });
+twoTap($("#btnGoto"), "انتقل وابدأ هذا الشوط", "اضغط مرة أخرى للتأكيد", "goto", () => ({ round: Number($("#fixRound").value), part: Number($("#fixPart").value) }));
 $("#btnLesson").addEventListener("click", () => control("lesson", { on: !game.lesson }));
 $("#btnPrayer").addEventListener("click", () => control("prayer", { on: !game.prayer }));
 
