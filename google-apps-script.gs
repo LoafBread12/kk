@@ -14,7 +14,7 @@ const PART_MINUTES = 15;
 const partsFor_ = round => PARTS_PER_ROUND[Math.min(Math.max(1, round), PARTS_PER_ROUND.length) - 1];
 
 const SHEETS = {
-  progress: { name: "التقدم", headers: ["الجهاز", "الفريق", "المرحلة", "اسم المرحلة", "المحطات المفتوحة", "انتهى", "آخر تحديث", "النمو بالسقي (سم)", "تعديل المعلّم (سم)", "الطول (سم)"] },
+  progress: { name: "التقدم", headers: ["الجهاز", "الفريق", "المرحلة", "اسم المرحلة", "المحطات المفتوحة", "انتهى", "آخر تحديث", "النمو بالسقي (سم)", "تعديل المعلّم (سم)", "الطول (سم)", "المجموعة"] },
   log:      { name: "السجل",  headers: ["الوقت", "الجولة", "الجهاز", "الفريق", "المرحلة", "المحطات المفتوحة", "انتهى", "الطول (سم)"] },
   rounds:   { name: "الجولات", headers: ["الجولة", "البداية", "النهاية", "الشوط", "موعد الانتهاء"] },
   items:    { name: "العناصر", headers: ["المعرّف", "الجهاز", "الفريق", "النوع", "المقدار (سم)", "وقت الإعطاء", "وقت الاستخدام"] }
@@ -128,7 +128,8 @@ function report_(d) {
   const adj = i >= 0 ? Number(body[i][8]) || 0 : 0;
   const height = round1_(Math.max(0, growth + adj));
   const stage = stageOf_(height);
-  const row = [id, team, stage + 1, STAGE_NAMES[stage], stations, done, now, growth, adj, height];
+  const group = Math.max(0, Math.min(20, Number(d.group) || 0));
+  const row = [id, team, stage + 1, STAGE_NAMES[stage], stations, done, now, growth, adj, height, group];
   if (i >= 0) progress.getRange(i + 2, 1, 1, row.length).setValues([row]);
   else progress.appendRow(row);
   sheet_("log").appendRow([now, st.round, id, team, stage + 1, stations, done, height]);
@@ -262,7 +263,8 @@ function doGet(e) {
     id: String(r[0]), team: plain_(r[1]), stage: Number(r[2]) || 1, stageName: String(r[3]),
     stations: Number(r[4]) || 0, done: r[5] === "نعم", updated: iso_(r[6]),
     growth: Number(r[7]) || 0, adj: Number(r[8]) || 0, height: Number(r[9]) || 0,
-    items: pending.filter(x => x.id === String(r[0])).length
+    items: pending.filter(x => x.id === String(r[0])).length,
+    group: Number(r[10]) || 0
   }));
   return out_({ state: st, rows: rows });
 }
