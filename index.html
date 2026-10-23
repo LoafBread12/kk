@@ -280,6 +280,29 @@ button,input{font:inherit;color:inherit}
 .prayer-card p{margin:0;font-size:18px;font-weight:600;line-height:1.6;color:#e3f2e8}
 .prayer-card .pr-time{margin-top:6px;font-size:14px;font-weight:800;color:#bfe3d4;background:rgba(0,0,0,.25);border-radius:20px;padding:3px 14px}
 
+
+/* group rotation: the team's station for this shawt lights up, with where to go */
+.groups{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.groups button{height:48px;border:0;border-radius:8px;cursor:pointer;font-family:var(--f-display);font-weight:400;font-size:26px;color:var(--ink-dark);
+  background:var(--parch);box-shadow:inset 0 -3px 0 rgba(0,0,0,.15),0 0 0 2px var(--wood-900)}
+.groups button[aria-pressed="true"]{background:var(--gold);color:#3a2006;box-shadow:0 0 0 3px #fff6e3,0 0 14px rgba(244,195,79,.8)}
+.g-label{font-size:13px;font-weight:800;margin:0}
+.assign{margin:0 12px 10px;padding:10px 12px;border-radius:8px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;align-items:center;color:#3a2006;
+  background:linear-gradient(180deg,#ffe9a6,var(--gold));box-shadow:0 0 0 2px #fff1bf,0 0 18px rgba(244,195,79,.55)}
+.assign.next{color:var(--ink);background:rgba(0,0,0,.3);box-shadow:inset 0 0 0 1px rgba(244,195,79,.5)}
+.assign .a-ico{grid-row:span 3;width:52px;height:52px;border-radius:10px;display:grid;place-items:center;color:var(--gold);background:linear-gradient(160deg,var(--sky-500),var(--sky-900))}
+.assign .a-ico svg{width:30px;height:30px}
+.assign .a-when{font-size:13px;font-weight:800;opacity:.85}
+.assign .a-name{font-family:var(--f-display);font-size:24px;line-height:1.15}
+.assign .a-where{display:flex;align-items:center;gap:5px;font-size:15px;font-weight:800}
+.assign .a-where svg{width:16px;height:16px;flex:none}
+.station.mine{order:-1;box-shadow:0 0 0 3px var(--gold),0 0 22px rgba(244,195,79,.75),0 4px 0 rgba(0,0,0,.25);animation:mineGlow 1.8s ease-in-out infinite}
+@keyframes mineGlow{50%{box-shadow:0 0 0 3px #fff1bf,0 0 34px rgba(244,195,79,.95),0 4px 0 rgba(0,0,0,.25)}}
+.station.other{opacity:.6}
+.st-where{display:flex;align-items:center;gap:4px;font-size:13px;font-weight:800;color:#7a5634}
+.st-where svg{width:13px;height:13px;flex:none}
+@media (prefers-reduced-motion:reduce){.station.mine{animation:none}}
+
 /* ---------- Station board ---------- */
 .board{display:flex;flex-direction:column;overflow:auto;
   background:repeating-linear-gradient(90deg,rgba(255,255,255,.03) 0 3px,transparent 3px 28px),linear-gradient(180deg,var(--sky-700),var(--sky-900))}
@@ -444,6 +467,8 @@ button,input{font:inherit;color:inherit}
         <p>اكتبوا اسم الفريق ليعرف المعلّم إلى أين وصلتم.</p>
         <label for="teamName" hidden>اسم الفريق</label>
         <input id="teamName" maxlength="30" autocomplete="off" placeholder="مثال: فريق الياسمين">
+        <p class="g-label" id="groupLabel">اختاروا رقم مجموعتكم</p>
+        <div class="groups" id="groups" role="group" aria-labelledby="groupLabel"></div>
         <button type="submit">ابدأ اللعب</button>
         <p class="join-msg" id="joinMsg" aria-live="polite"></p>
       </div>
@@ -474,6 +499,12 @@ button,input{font:inherit;color:inherit}
     <div class="b-head"><h2>المحطات</h2><div class="plank"></div></div>
     <div class="b-sub"><span id="openCount">المحطات المفتوحة: ٠ من ٦</span><span class="pips" id="pips"></span></div>
     <p class="b-help">اضغط على المحطة واكتب كلمة السر التي حصلت عليها من اللعبة، فيمتلئ إبريق السقي.</p>
+    <div class="assign" id="assign" hidden aria-live="polite">
+      <span class="a-ico" id="aIco"></span>
+      <span class="a-when" id="aWhen"></span>
+      <span class="a-name" id="aName"></span>
+      <span class="a-where"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" fill="currentColor"/></svg><span id="aWhere"></span></span>
+    </div>
     <ul class="stations" id="stations"></ul>
     <section class="timebox" id="timebox" hidden aria-label="وقت الجولة">
       <div class="tb-ring" aria-hidden="true">
@@ -508,7 +539,7 @@ button,input{font:inherit;color:inherit}
 /* ===================== الإعدادات: غيّر أسماء المحطات وكلمات السر من هنا ===================== */
 const CONFIG = {
   stations: [
-    { id: "s1", name: "الحجرة المظلمة", icon: "door", round: 1, steps: [
+    { id: "s1", name: "الحجرة المظلمة", icon: "door", round: 1, location: "الطابق الثاني", steps: [
       { label: "اكتبوا السؤال الذي وجدتموه في الحجرة", button: "أرسل السؤال", water: 0.4,
         accept: ["اسم البيعة التي كانت تحت الشجرة"], keywords: ["بيعة", "شجرة"],
         success: "أحسنتم! حصلتم على بعض الماء. والآن ابحثوا عن الجواب.", wrong: "هذا ليس السؤال الموجود في الحجرة. اقرؤوه جيدًا واكتبوه مرة أخرى." },
@@ -516,7 +547,7 @@ const CONFIG = {
         accept: ["الرضوان", "رضوان", "بيعة الرضوان"] }
     ] },
     // محطة البصمة: يكتب المعلّم «بصم» إذا وضع الطلاب بصمتهم، ثم يكتب الفريق الكلمة المخفية «أنفسكم».
-    { id: "s2", name: "محطة البصمة", icon: "print", round: 1, steps: [
+    { id: "s2", name: "محطة البصمة", icon: "print", round: 1, location: "", steps: [
       { label: "هل وضع الطلاب بصمتهم؟", button: "تأكيد", placeholder: "يكتبها المعلّم", water: 0.5,
         accept: ["بصم"],
         success: "أحسنتم! حصلتم على بعض الماء. والآن ابحثوا عن الكلمة المخفية.",
@@ -525,16 +556,16 @@ const CONFIG = {
         accept: ["أنفسكم", "انفسكم"],
         wrong: "ليست هذه الكلمة المخفية. ابحثوا جيدًا وحاولوا مرة أخرى." }
     ] },
-    { id: "s3", name: "محطة الجبل",  icon: "mountain", code: "303", round: 1 },
-    { id: "s4", name: "محطة النجمة", icon: "star",     code: "404", round: 1 },
+    { id: "s3", name: "محطة الجبل",  icon: "mountain", code: "303", round: 1, location: "" },
+    { id: "s4", name: "محطة النجمة", icon: "star",     code: "404", round: 1, location: "" },
     // الجولة الثانية: يكتب المعلّم «فوز» أو «خسر» في خانة المحطة
-    { id: "s5", name: "محطة الأوراق", icon: "leaf", round: 2, steps: [ { label: "يكتب المعلّم النتيجة هنا", button: "أدخل الرمز", placeholder: "رمز المعلّم",
+    { id: "s5", name: "محطة الأوراق", icon: "leaf", round: 2, location: "", steps: [ { label: "يكتب المعلّم النتيجة هنا", button: "أدخل الرمز", placeholder: "رمز المعلّم",
         wrong: "هذا الرمز غير صحيح. اطلبوا من المعلّم أن يكتبه.",
         results: [
           { accept: ["فوز", "فاز"], water: 1, toast: "مبروك الفوز! ماء كثير من", success: "مبروك الفوز! حصلتم على ماء كثير، اذهبوا واسقوا البذرة." },
           { accept: ["خسر", "خسارة"], water: 0.35, toast: "قليل من الماء من", success: "حصلتم على قليل من الماء. أحسنتم المحاولة!" }
         ] } ] },
-    { id: "s6", name: "محطة السومو", icon: "ring", round: 2, steps: [ { label: "يكتب المعلّم النتيجة هنا", button: "أدخل الرمز", placeholder: "رمز المعلّم",
+    { id: "s6", name: "محطة السومو", icon: "ring", round: 2, location: "", steps: [ { label: "يكتب المعلّم النتيجة هنا", button: "أدخل الرمز", placeholder: "رمز المعلّم",
         wrong: "هذا الرمز غير صحيح. اطلبوا من المعلّم أن يكتبه.",
         results: [
           { accept: ["فوز", "فاز"], water: 1, toast: "مبروك الفوز! ماء كثير من", success: "مبروك الفوز! حصلتم على ماء كثير، اذهبوا واسقوا البذرة." },
@@ -604,7 +635,7 @@ const RATE = WPS / CONFIG.pourSeconds;               // growth per second of aim
 
 /* ---------- state ---------- */
 const KEY = "bustan-albithra-v1";
-let state = { unlocked: [], water: 0, progress: 0, team: "", gameId: "", adj: 0, steps: {}, quests: {} };
+let state = { unlocked: [], water: 0, progress: 0, team: "", gameId: "", adj: 0, steps: {}, quests: {}, group: 0 };
 try {
   const s = JSON.parse(localStorage.getItem(KEY));
   if (s && Array.isArray(s.unlocked)) {
@@ -613,6 +644,7 @@ try {
     state.unlocked = s.unlocked.filter(id => CONFIG.stations.some(x => x.id === id));
     state.steps = s.steps && typeof s.steps === "object" ? s.steps : {};
     state.quests = s.quests && typeof s.quests === "object" ? s.quests : {};
+    state.group = Number(s.group) || 0;
     state.water = Math.max(0, +s.water || 0);
     state.progress = Math.min(MAX, Math.max(0, +s.progress || 0));
     state.adj = Number(s.adj) || 0;
@@ -795,7 +827,7 @@ CONFIG.stations.forEach((st, i) => {
   li.innerHTML = `
     <button class="st-head" type="button" aria-expanded="false" aria-controls="drop-${st.id}">
       <span class="st-ico">${ICONS[st.icon] || ICONS.star}</span>
-      <span class="st-text"><span class="st-name"></span><span class="st-status"></span></span>
+      <span class="st-text"><span class="st-name"></span><span class="st-status"></span><span class="st-where" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" fill="currentColor"/></svg><span></span></span></span>
       <span class="st-chev">${CHEV}</span>
     </button>
     <div class="st-drop" id="drop-${st.id}"><div class="st-drop-in">
@@ -811,6 +843,7 @@ CONFIG.stations.forEach((st, i) => {
       <p class="st-waitmsg"></p>
     </div></div>`;
   li.querySelector(".st-name").textContent = st.name;
+  if (st.location) { li.querySelector(".st-where").hidden = false; li.querySelector(".st-where span").textContent = st.location; }
   list.appendChild(li);
   const head = li.querySelector(".st-head"), drop = li.querySelector(".st-drop"), form = li.querySelector("form"),
         input = li.querySelector("input"), msg = li.querySelector(".st-msg");
@@ -820,6 +853,8 @@ CONFIG.stations.forEach((st, i) => {
     e.preventDefault();
     const steps = stepsOf(st), k = stepsDone(st), step = steps[k];
     if (!step || roundLocked(st)) return;
+    const asg = assignment();
+    if (asg && asg.when === "now" && asg.st.id !== st.id) { renderStations(); return; }
     if (!canAnswer()) { renderStations(); return; }
     if (!norm2(input.value)) { setMsg(msg, step.code ? "اكتب كلمة السر أولًا." : "اكتبوا الإجابة أولًا.", "bad"); input.focus(); return; }
     const res = matchResult(step, input.value);
@@ -880,13 +915,16 @@ function renderStations() {
   const n = state.unlocked.length;
   list.querySelectorAll(".station").forEach(li => {
     const st = CONFIG.stations.find(x => x.id === li.dataset.id), steps = stepsOf(st), k = stepsDone(st);
-    const done = k >= steps.length, multi = steps.length > 1, wait = !done && roundLocked(st), closed = !done && !wait && !canAnswer();
+    const a = assignment(), mine = !!a && a.when === "now" && a.st.id === st.id, other = !!a && a.when === "now" && !mine;
+    const done = k >= steps.length, multi = steps.length > 1, wait = !done && roundLocked(st), closed = !done && !wait && (!canAnswer() || other);
+    li.classList.toggle("mine", mine && !done);
+    li.classList.toggle("other", other && !done);
     li.classList.toggle("done", done);
     li.classList.toggle("wait", wait);
     li.classList.toggle("closed", closed);
     li.querySelector("input").disabled = closed || wait;
     li.querySelector(".st-waitmsg").textContent = wait ? `هذه المحطة تُفتح عندما يبدأ المعلّم الجولة ${toAr(st.round)}.`
-      : closed ? closedMsg() : "";
+      : closed ? (other && canAnswer() ? `هذه ليست محطتكم في هذا الشوط. محطتكم الآن: ${a.st.name}، ${whereOf(a.st)}.` : closedMsg()) : "";
     li.querySelector(".st-status").innerHTML = done ? CHECK + "فُتح الماء"
       : wait ? LOCK + `تُفتح في الجولة ${toAr(st.round)}`
       : k > 0 ? LOCK + `أُنجزت ${toAr(k)} من ${toAr(steps.length)}، بقيت خطوة`
@@ -905,6 +943,7 @@ function renderStations() {
     li.hidden = !vis;
     if (!vis && openId === li.dataset.id) toggleStation(openId);
   });
+  renderAssign();
   $("#openCount").textContent = CONFIG.reportUrl && shown.length < CONFIG.stations.length
     ? `محطات الجولة ${toAr(boardRound())}: ${toAr(m)} من ${toAr(shown.length)}`
     : `المحطات المفتوحة: ${toAr(n)} من ${toAr(CONFIG.stations.length)}`;
@@ -1223,7 +1262,7 @@ resetBtn.addEventListener("click", () => {
   }
   clearTimeout(resetTimer);
   resetBtn.classList.remove("arm"); resetBtn.textContent = "بدء من جديد";
-  state = { unlocked: [], water: 0, progress: 0, team: "", gameId: state.gameId, adj: state.adj, steps: {}, quests: {} };
+  state = { unlocked: [], water: 0, progress: 0, team: "", gameId: state.gameId, adj: state.adj, steps: {}, quests: {}, group: 0 };
   renderQuests();
   complete = false; parts = []; wet = 0;
   save(true);
@@ -1245,16 +1284,74 @@ function showTeam() {
   joinEl.hidden = has;
   board.inert = !has;
   $("#teamLabel").hidden = !has;
-  $("#teamLabel").textContent = has ? "فريق: " + state.team : "";
+  $("#teamLabel").textContent = has ? "فريق: " + state.team + (state.group ? "، المجموعة " + toAr(state.group) : "") : "";
+  if (!has) { pickedGroup = 0; renderGroups(); }
   if (!has) setTimeout(() => teamInput.focus({ preventScroll: true }), 50);
 }
 joinEl.addEventListener("submit", e => {
   e.preventDefault();
   const name = teamInput.value.trim().replace(/\s+/g, " ").slice(0, 30);
   if (!name) { $("#joinMsg").textContent = "اكتبوا اسم الفريق أولًا."; teamInput.focus(); return; }
-  state.team = name; teamInput.value = ""; $("#joinMsg").textContent = "";
+  if (rotationOn() && !pickedGroup) { $("#joinMsg").textContent = "اختاروا رقم مجموعتكم."; return; }
+  state.team = name; state.group = pickedGroup; teamInput.value = ""; $("#joinMsg").textContent = "";
+  renderStations();
   save(true); showTeam(); report();
 });
+
+/* ---------- group rotation ---------- */
+// Each round the groups share that round's stations and move to the next one every shawt:
+// with 4 stations every group is at a different one; with 2, groups 1-2 and 3-4 swap halfway.
+const GROUPS = CONFIG.groups || 4;
+let pickedGroup = 0;
+const rotationOn = () => !!CONFIG.reportUrl && GROUPS > 1;
+function renderGroups() {
+  const box = $("#groups");
+  $("#groupLabel").hidden = box.hidden = !rotationOn();
+  if (box.children.length !== GROUPS) {
+    box.textContent = "";
+    for (let g = 1; g <= GROUPS; g++) {
+      const b = document.createElement("button");
+      b.type = "button"; b.dataset.g = g; b.textContent = toAr(g); b.setAttribute("aria-label", "المجموعة " + toAr(g));
+      b.addEventListener("click", () => { pickedGroup = g; renderGroups(); });
+      box.append(b);
+    }
+  }
+  [...box.children].forEach(b => b.setAttribute("aria-pressed", Number(b.dataset.g) === pickedGroup));
+}
+function stationFor(group, r, p) {
+  const list = CONFIG.stations.filter(st => (st.round || 1) === r);
+  if (!list.length || !group || !p) return null;
+  const per = Math.max(1, Math.round(GROUPS / list.length));
+  return list[(Math.floor((group - 1) / per) + (p - 1)) % list.length];
+}
+// the team's station now (during a shawt) or next (before the game, between shawts, between rounds)
+function assignment() {
+  if (!rotationOn() || !state.group) return null;
+  const s = round.status;
+  let st = null, when = "next";
+  if (s === "running") { st = stationFor(state.group, round.n, round.part); when = "now"; }
+  else if (s === "break") st = stationFor(state.group, round.n, round.part + 1);
+  else if (s === "idle" || s === "unknown") st = stationFor(state.group, 1, 1);
+  else if (s === "ended") st = stationFor(state.group, round.n + 1, 1);
+  return st ? { st, when } : null;
+}
+const PIN_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" fill="currentColor"/></svg>';
+const whereOf = st => st.location || "يحدّد المعلّم المكان";
+let lastAssignKey = "";
+function renderAssign() {
+  const a = assignment(), box = $("#assign");
+  box.hidden = !a || round.status === "over";
+  if (!a) { lastAssignKey = ""; return; }
+  box.classList.toggle("next", a.when !== "now");
+  $("#aIco").innerHTML = ICONS[a.st.icon] || ICONS.star;
+  $("#aWhen").textContent = a.when === "now" ? "محطتكم الآن، اذهبوا إليها" : "محطتكم في الشوط القادم";
+  $("#aName").textContent = a.st.name;
+  $("#aWhere").textContent = whereOf(a.st);
+  const key = a.when + a.st.id + round.n + round.part;
+  if (a.when === "now" && lastAssignKey && key !== lastAssignKey) toast("اذهبوا إلى " + a.st.name, whereOf(a.st), 4200);
+  lastAssignKey = key;
+}
+renderGroups();
 /* ---------- rounds: the teacher starts and ends them; watering only while one is running ---------- */
 // "unknown" until the first answer, so a slow or unreachable sheet never locks the game
 // part: which of the round's parts is on; endsAt: when it stops (device clock, corrected by skew)
@@ -1293,7 +1390,7 @@ function renderRound() {
     $("#prayerTime").textContent = round.status === "running" && round.frozenLeft
       ? "الوقت المتبقي من الشوط محفوظ: " + fmtClock(Math.ceil(round.frozenLeft / 1000)) : "";
   }
-  const openKey = canAnswer() + "|" + canQuest() + "|" + round.lesson + "|" + round.prayer;
+  const openKey = canAnswer() + "|" + canQuest() + "|" + round.lesson + "|" + round.prayer + "|" + round.n + "." + round.part + "|" + round.status;
   if (round.answerOpen !== openKey) { round.answerOpen = openKey; renderStations(); renderQuests(); }
   qtab.classList.toggle("lesson", round.lesson && !qtab.classList.contains("all"));
   tickTimer();
@@ -1385,7 +1482,7 @@ async function pollRound() {
   if (!s || Array.isArray(s) || !s.status) { round.status = "running"; renderRound(); return; }  // older script without rounds
   if (s.gameId && state.gameId && s.gameId !== state.gameId) {
     // the teacher started a new game: start this device over
-    state = { unlocked: [], water: 0, progress: 0, team: "", gameId: s.gameId, adj: 0, steps: {}, quests: {} };
+    state = { unlocked: [], water: 0, progress: 0, team: "", gameId: s.gameId, adj: 0, steps: {}, quests: {}, group: 0 };
     renderQuests();
     vis.adj = 0; hold = 0; items = []; Object.keys(inFlight).forEach(k => delete inFlight[k]); renderItems();
     complete = false; parts = []; wet = 0;
@@ -1567,7 +1664,7 @@ function report() {
   lastReport = performance.now();
   const st = stageOfH(heightCm());
   const body = JSON.stringify({
-    id: deviceId, gameId: state.gameId, team: state.team, stage: st + 1, stageName: STAGES[st].name,
+    id: deviceId, gameId: state.gameId, team: state.team, group: state.group, stage: st + 1, stageName: STAGES[st].name,
     growth: Math.round(growthCm(state.progress) * 10) / 10,
     stations: state.unlocked.length, totalStations: CONFIG.stations.length, done: state.progress >= MAX
   });

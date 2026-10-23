@@ -258,6 +258,14 @@ document.querySelectorAll(".amt button[data-kind]").forEach(b => b.addEventListe
   document.querySelectorAll(".amt button[data-kind]").forEach(x => x.setAttribute("aria-pressed", x === b));
   renderCards(lastRows);
 }));
+// same rotation as the game: groups move to the next station of the round every shawt
+const GROUPS = CFG.groups || 4;
+function stationFor(group, r, p) {
+  const list = (CFG.stations || []).filter(st => (st.round || 1) === r);
+  if (!list.length || !group || !p) return null;
+  const per = Math.max(1, Math.round(GROUPS / list.length));
+  return list[(Math.floor((group - 1) / per) + (p - 1)) % list.length];
+}
 const withAction = a => URL_ + (URL_.includes("?") ? "&" : "?") + "action=" + a;
 
 let game = { status: "idle", round: 0, gameId: "" }, hasRounds = false, view = "cards", lastRows = [];
@@ -296,6 +304,10 @@ function renderCards(rows) {
     const foot = el("div", "t-foot");
     foot.append(el("span", null, `المحطات: ${toAr(r.stations)} من ${toAr(TOTAL)}`), el("span", null, ago(r.updated)));
     card.append(top, height);
+    if (r.group) {
+      const now = game.status === "running" ? stationFor(r.group, game.round, game.part) : null;
+      card.append(el("div", "t-adj", "المجموعة " + toAr(r.group) + (now ? "، الآن في: " + now.name : "")));
+    }
     if (r.adj) card.append(el("div", "t-adj", "تعديل المعلّم: " + fmtD(r.adj)));
     if (r.items) card.append(el("div", "t-adj", `هدايا لم يستخدمها الفريق بعد: ${toAr(r.items)}`));
     card.append(stage, bar, foot);
