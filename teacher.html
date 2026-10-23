@@ -69,6 +69,9 @@ h1{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(28px,5v
 .fix[open] summary{color:var(--ink)}
 .fix-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px;font-weight:800}
 .fix-row select{height:38px;border-radius:6px;border:2px solid var(--wood-900);background:var(--parch);color:var(--ink-dark);font:inherit;font-weight:800;padding:0 8px}
+.ctrl-msg{width:100%;margin:0;padding:8px 12px;border-radius:8px;font-weight:800;font-size:15px}
+.ctrl-msg.err{background:rgba(168,50,31,.35);color:#ffd2c8;box-shadow:inset 0 0 0 1px #ffb4a3}
+.ctrl-msg.ok{background:rgba(109,187,79,.25);color:#e3f2c8;box-shadow:inset 0 0 0 1px #a8e08a}
 .fix-note{margin:6px 0 0;font-size:13px;font-weight:600;color:var(--ink-mut)}
 .pin{display:flex;flex-wrap:wrap;align-items:center;gap:8px;width:100%;padding-top:8px;border-top:1px solid rgba(255,255,255,.15)}
 .pin label{font-weight:800}
@@ -204,6 +207,7 @@ h1{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(28px,5v
       </div>
       <p class="fix-note">يبدأ الشوط المختار من جديد بوقته الكامل. لا يتغيّر تقدّم الفرق ولا ماؤها ولا طول نباتاتها.</p>
     </details>
+    <p class="ctrl-msg" id="ctrlMsg" hidden role="status"></p>
     <form class="pin" id="pinForm" hidden>
       <label for="pinInput">رمز المعلّم</label>
       <input id="pinInput" inputmode="numeric" autocomplete="off">
@@ -424,6 +428,13 @@ function renderControls() {
   $("#tabReplay").hidden = s !== "over";
 }
 
+let msgTimer = 0;
+function ctrlMsg(text, kind) {
+  const m = $("#ctrlMsg");
+  m.textContent = text; m.className = "ctrl-msg " + kind; m.hidden = false;
+  clearTimeout(msgTimer);
+  msgTimer = setTimeout(() => { m.hidden = true; }, kind === "err" ? 20000 : 6000);
+}
 let PIN = "";
 try { PIN = localStorage.getItem("bustan-pin") || ""; } catch (e) {}
 let pendingAction = null;
@@ -436,12 +447,17 @@ async function control(action, extra) {
     if (j.error === "bad_pin") {
       PIN = ""; try { localStorage.removeItem("bustan-pin"); } catch (e) {}
       pendingAction = [action, extra]; $("#pinForm").hidden = false; $("#pinMsg").textContent = "الرمز غير صحيح، حاول مرة أخرى."; $("#pinInput").focus();
+    } else if (j.error === "bad_action") {
+      // the deployed Apps Script is older than this page
+      ctrlMsg("هذا الزر يحتاج نسخة أحدث من كود Apps Script: الصق محتوى google-apps-script.gs في Apps Script، ثم Deploy ← Manage deployments ← تعديل ← New version ← Deploy.", "err");
+    } else if (j.error) {
+      ctrlMsg("لم يُنفَّذ الأمر (" + j.error + "). حاول مرة أخرى.", "err");
     } else if (j.state) {
       $("#pinForm").hidden = true; $("#pinMsg").textContent = "";
+      if (action === "goto" && extra) ctrlMsg(`تم: بدأ الشوط ${toAr(j.state.part)} من الجولة ${toAr(j.state.round)} من جديد.`, "ok");
     }
   } catch (e) {
-    $("#status").className = "status err";
-    $("#status").textContent = "لم يصل الأمر إلى الجدول. تحقّق من الاتصال وحاول مرة أخرى.";
+    ctrlMsg("لم يصل الأمر إلى الجدول. تحقّق من الاتصال وحاول مرة أخرى.", "err");
   }
   document.querySelectorAll(".controls .btn").forEach(b => b.disabled = false);
   await load();
