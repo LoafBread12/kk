@@ -1,6 +1,6 @@
 """Builds the dark-room jigsaw puzzle (A3) in ..: dark-room-puzzle.html.
 
-Page 1 is the puzzle: print it on A3, cut along the dotted lines into 24 pieces, shuffle.
+Page 1 is the puzzle: print it on A3, cut along the dotted lines into 10 pieces, shuffle.
 Page 2 is the teacher's key. Render the PDF with render-pdf.js (Chromium, A3, backgrounds on).
 Everything is drawn as shapes and patterns: no people and no animals.
 """
@@ -10,7 +10,7 @@ from pathlib import Path
 
 W, H = 297.0, 420.0                      # A3 in mm; one SVG unit is one millimetre
 X0, Y0, AW, AH = 8.5, 10.0, 280.0, 400.0  # the puzzle area, inside the printer's margins
-COLS, ROWS = 4, 6
+COLS, ROWS = 2, 5
 CW, RH = AW / COLS, AH / ROWS
 CX = X0 + AW / 2
 rng = random.Random(7)
@@ -34,14 +34,16 @@ def edge(x0, y0, x1, y1, s, shift):
     length = math.hypot(dx, dy)
     ux, uy = dx / length, dy / length
     nx, ny = -uy, ux
+    K = min(length, 76.0)          # knob size in mm: the same on long and short edges
 
-    def P(u, v):
-        return f(x0 + ux * u * length + nx * v * length * s, y0 + uy * u * length + ny * v * length * s)
+    def P(u, v):                   # u: 0..1 across the knob template, v: height in template units
+        a = length * (.5 + shift) + (u - .5) * K
+        return f(x0 + ux * a + nx * v * K * s, y0 + uy * a + ny * v * K * s)
 
-    out = ["M" + f(x0, y0), "L" + P(0.38 + shift, 0)]
+    out = ["M" + f(x0, y0), "L" + P(0.38, 0)]
     for c1, c2, e in KNOB:
-        out.append("C" + " ".join(P(u + shift, v) for u, v in (c1, c2, e)))
-    out.append("L" + P(1, 0))
+        out.append("C" + " ".join(P(u, v) for u, v in (c1, c2, e)))
+    out.append("L" + f(x1, y1))
     return " ".join(out)
 
 
@@ -225,7 +227,7 @@ HTML = f"""<!doctype html>
       <h2>التجهيز</h2>
       <ol>
         <li>اطبع الصفحة الأولى على ورق <b>A3</b> بألوانها (ورق سميك أفضل، أو غلّفها).</li>
-        <li>قُصّ على الخطوط المنقّطة لتحصل على <b>٢٤ قطعة</b>.</li>
+        <li>قُصّ على الخطوط المنقّطة لتحصل على <b>١٠ قطع</b>.</li>
         <li>اخلط القطع وضعها في ظرف، وأخفِه في الحجرة المظلمة ليبحث عنه الطلاب.</li>
         <li>بعد كل مجموعة، اخلط القطع من جديد للمجموعة التالية.</li>
       </ol>
