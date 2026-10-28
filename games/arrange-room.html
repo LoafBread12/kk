@@ -1,0 +1,379 @@
+<title>رتّب الغرفة</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Readex+Pro:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  /* Layout: one column — the room seen from above with its wall numbers, then the three rules, then the classroom kit. */
+  :root {
+    --night: #151826;
+    --panel: #1d2134;
+    --line: #2f3652;
+    --wall: #4a3346;          /* plum plaster */
+    --wall-edge: #33232f;
+    --wood: #e2b97f;          /* lit parquet */
+    --wood-dark: #c99a5c;
+    --table: #8a5a35;
+    --glow: #ffd98a;
+    --ink: #f4ecdc;
+    --muted: #b3abc0;
+    --ok: #7fd6a2;
+    --bad: #ff8a7a;
+    --display: "Lalezar", "Readex Pro", system-ui, sans-serif;
+    --body: "Readex Pro", system-ui, sans-serif;
+    --cell: 52px;
+    color-scheme: dark;
+  }
+  html, body { height: 100%; }
+  body { background: radial-gradient(ellipse at 50% 0%, #22273d 0%, var(--night) 60%) fixed, var(--night);
+         color: var(--ink); font-family: var(--body); direction: rtl;
+         padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 32px; }
+  .wrap { max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  header { text-align: center; }
+  h1 { font-family: var(--display); font-weight: 400; font-size: clamp(36px, 9vw, 52px); line-height: 1; margin: 0; color: var(--glow); text-shadow: 0 0 18px rgba(255,217,138,.3); }
+  header p { margin: 6px 0 0; color: var(--muted); font-size: 15px; }
+
+  /* the three rules, always visible above the room */
+  .rules3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; width: 100%; }
+  .rule { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 10px 8px; text-align: center; font-size: 13.5px; line-height: 1.45; color: #e7e0ef; }
+  .rule svg { width: 44px; height: 44px; display: block; margin: 0 auto 4px; }
+  .rule b { color: var(--glow); }
+
+  /* room */
+  .room { position: relative; padding: 24px 20px 20px; background: var(--wall); border-radius: 6px;
+          box-shadow: inset 0 0 0 3px var(--wall-edge), 0 18px 40px rgba(0,0,0,.45); max-width: 100%; }
+  .window { position: absolute; top: 4px; left: 50%; transform: translateX(-50%); width: 34%; height: 12px; border-radius: 2px;
+            background: linear-gradient(90deg, #bcd6ff 0 49%, #6d4f68 49% 51%, #bcd6ff 51%); box-shadow: 0 0 18px rgba(188,214,255,.4); }
+  .door { position: absolute; left: 3px; bottom: 26%; width: 13px; height: 58px; background: #6b4a2f; border-radius: 2px; }
+  .plant { position: absolute; left: -8px; top: -12px; width: 42px; height: 50px; }
+  .board { direction: ltr; display: grid; grid-template-columns: repeat(var(--cols), var(--cell)) calc(var(--cell) * .7);
+           grid-auto-rows: var(--cell); position: relative; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+  .board .clue { display: grid; place-items: center; font: 800 calc(var(--cell) * .5) / 1 var(--body); color: var(--glow); text-shadow: 0 1px 0 #0006; }
+  .board .clue.top { height: calc(var(--cell) * .7); align-self: end; }
+  .board .clue.ok { color: var(--ok); }
+  .board .clue.over { color: var(--bad); }
+  .board .corner { height: calc(var(--cell) * .7); align-self: end; }
+  .sq { width: var(--cell); height: var(--cell); padding: 0; margin: 0; border: 0; cursor: pointer; position: relative; display: grid; place-items: center;
+        background: repeating-linear-gradient(var(--g, 0deg), rgba(0,0,0,.06) 0 2px, transparent 2px calc(var(--cell) / 4)), linear-gradient(var(--wood), var(--wood-dark));
+        box-shadow: inset 0 0 0 1px rgba(110,70,30,.35); -webkit-tap-highlight-color: transparent; }
+  .sq.alt { --g: 90deg; }
+  .sq:hover:not(.table) { filter: brightness(1.08); }
+  .sq.table { cursor: default; }
+  .sq svg { width: 88%; height: 88%; pointer-events: none; }
+  .sq .dot { width: 22%; height: 22%; border-radius: 50%; background: rgba(90,55,25,.45); }
+  .sq.bad::after { content: ""; position: absolute; inset: 3px; border-radius: 6px; box-shadow: 0 0 0 3px var(--bad); }
+  .sq.hint::after { content: ""; position: absolute; inset: 3px; border-radius: 6px; box-shadow: 0 0 0 3px var(--ok); animation: pulse 1s ease-in-out 3; }
+  .sq:focus-visible { outline: 3px solid var(--glow); outline-offset: -3px; }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 3px var(--ok), 0 0 16px var(--ok); } }
+  .room.won .board { filter: drop-shadow(0 0 18px rgba(255,217,138,.45)); }
+
+  .msg { min-height: 26px; text-align: center; font-size: 16px; }
+  .msg.win { color: var(--glow); font-weight: 600; }
+
+  .controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+  .seg { display: flex; background: #0e1019; border: 1px solid var(--line); border-radius: 12px; padding: 3px; }
+  .seg button, .btn { font: 600 14px var(--body); color: var(--ink); background: transparent; border: 0; border-radius: 9px; padding: 8px 12px; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: #2c3354; color: var(--glow); }
+  .btn { background: var(--panel); border: 1px solid var(--line); }
+  .btn:hover { border-color: var(--glow); }
+  button:focus-visible { outline: 2px solid var(--glow); outline-offset: 2px; }
+
+  .card { width: 100%; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px 16px; }
+  .card h2 { font-family: var(--display); font-weight: 400; font-size: 22px; margin: 0 0 6px; color: var(--glow); }
+  .card p, .card li { font-size: 14px; line-height: 1.75; color: #ddd6e8; }
+  .card ol { margin: 0; padding-inline-start: 20px; list-style: arabic-indic; }
+  .card p { margin: 0 0 6px; }
+
+  @media (max-width: 440px) { .rule { font-size: 12.5px; } .rule svg { width: 36px; height: 36px; } }
+  @media (prefers-reduced-motion: reduce) { .sq.hint::after { animation: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>رتّب الغرفة</h1>
+    <p>ضع الأرائك في أماكنها الصحيحة. فكّر في القواعد الثلاث!</p>
+  </header>
+
+  <div class="rules3">
+    <div class="rule"><svg viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="31" r="9" fill="#8a5a35"/><circle cx="22" cy="31" r="6" fill="#a8744a"/><g transform="translate(6 1) scale(.8)"><rect x="3" y="9" width="34" height="18" rx="5" fill="#3fa0a8"/><rect x="3" y="9" width="34" height="6" rx="3" fill="#2f7f86"/></g></svg>
+      لكل <b>طاولة</b> أريكة واحدة بجانبها.</div>
+    <div class="rule"><svg viewBox="0 0 44 44" aria-hidden="true"><rect x="3" y="3" width="16" height="13" rx="3" fill="#c9962e"/><rect x="25" y="28" width="16" height="13" rx="3" fill="#8a3b4f"/><path d="M19 19l6 6" stroke="#ff8a7a" stroke-width="3" stroke-linecap="round"/><path d="M25 19l-6 6" stroke="#ff8a7a" stroke-width="3" stroke-linecap="round"/></svg>
+      الأرائك <b>لا تتلامس</b>، ولا من الزاوية.</div>
+    <div class="rule"><svg viewBox="0 0 44 44" aria-hidden="true"><rect x="4" y="16" width="36" height="12" rx="3" fill="#e2b97f"/><text x="22" y="12" text-anchor="middle" font-family="Readex Pro, sans-serif" font-weight="800" font-size="12" fill="#ffd98a">٢</text><rect x="8" y="18" width="9" height="8" rx="2" fill="#5468ad"/><rect x="27" y="18" width="9" height="8" rx="2" fill="#6f8f4c"/></svg>
+      الرقم على الجدار = <b>كم أريكة</b> في صفّه.</div>
+  </div>
+
+  <div class="room" id="room">
+    <div class="window" aria-hidden="true"></div>
+    <div class="door" aria-hidden="true"></div>
+    <svg class="plant" viewBox="0 0 46 56" aria-hidden="true">
+      <path d="M23 34 C14 30 8 20 10 10 C18 14 22 24 23 34Z" fill="#4f8f5a"/><path d="M23 34 C30 26 38 22 42 14 C40 26 32 32 23 34Z" fill="#3f7a4b"/>
+      <path d="M23 34 C20 24 24 12 30 4 C32 16 28 26 23 34Z" fill="#5fa36a"/><path d="M12 34h22l-3 20H15z" fill="#b5653f"/><path d="M11 32h24v5H11z" fill="#cf7a4e"/>
+    </svg>
+    <div class="board" id="board" aria-label="أرضية الغرفة"></div>
+  </div>
+
+  <div class="msg" id="msg" role="status" aria-live="polite">اضغط مربعًا مرة لتضع أريكة، ومرة ثانية لتضع نقطة «لا أريكة هنا».</div>
+
+  <div class="controls">
+    <div class="seg" role="group" aria-label="حجم الغرفة">
+      <button type="button" data-size="s" aria-pressed="true">سهلة ٥×٥</button>
+      <button type="button" data-size="m" aria-pressed="false">متوسطة ٦×٦</button>
+      <button type="button" data-size="l" aria-pressed="false">تحدٍّ ٧×٧</button>
+    </div>
+    <button class="btn" id="hint" type="button">تلميح</button>
+    <button class="btn" id="clear" type="button">امسح</button>
+    <button class="btn" id="next" type="button">غرفة جديدة</button>
+  </div>
+
+  <section class="card">
+    <h2>العبها في الصف</h2>
+    <p>اطبع النسخة الورقية: لوحات غرف فيها الطاولات والأرقام، وأرائك صغيرة تُقصّ ويحرّكها الأطفال بأيديهم.</p>
+    <ol>
+      <li>ضع لوحة الغرفة على الطاولة، وأعطِ كل طفل أو فريق الأرائك المقصوصة.</li>
+      <li>يضع الأطفال الأرائك بحيث تتّجه كل أريكة إلى طاولتها.</li>
+      <li>يراجعون القواعد الثلاث معًا، ثم يقارنون بصفحة الحلول.</li>
+    </ol>
+    <p>وللعب على أرض الصف: ارسموا الشبكة بشريط لاصق، وضعوا كراسيّ أو صناديق مكان الطاولات، والأطفال أنفسهم يقفون مكان الأرائك!</p>
+  </section>
+</div>
+
+<script>
+// "رتّب الغرفة" puzzle logic (Tents-style). Shared by the web game and the print-kit builder.
+// Board: R x C. tables: set of cells. Each table gets exactly one sofa orthogonally next to it;
+// sofas never touch (not even diagonally); wall numbers give sofas per row and column.
+(function (root) {
+  function makeRng(seed) {
+    let s = seed >>> 0 || 1;
+    return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296);
+  }
+  const orth = (R, C, i) => {
+    const r = Math.floor(i / C), c = i % C, o = [];
+    if (r > 0) o.push(i - C); if (r < R - 1) o.push(i + C);
+    if (c > 0) o.push(i - 1); if (c < C - 1) o.push(i + 1);
+    return o;
+  };
+  const king = (R, C, i) => {
+    const r = Math.floor(i / C), c = i % C, o = [];
+    for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+      if (!dr && !dc) continue;
+      const rr = r + dr, cc = c + dc;
+      if (rr >= 0 && rr < R && cc >= 0 && cc < C) o.push(rr * C + cc);
+    }
+    return o;
+  };
+
+  // Count distinct sofa layouts (stops at `limit`).
+  function countSolutions(R, C, tables, rows, cols, limit) {
+    const T = [...tables];
+    const isTable = new Set(T);
+    // order tables by fewest options to prune early
+    T.sort((a, b) => orth(R, C, a).filter((x) => !isTable.has(x)).length - orth(R, C, b).filter((x) => !isTable.has(x)).length);
+    const sofa = new Set(), rowN = new Array(R).fill(0), colN = new Array(C).fill(0);
+    const seen = new Set();
+    let found = 0;
+    (function go(k) {
+      if (found >= limit) return;
+      if (k === T.length) {
+        if (rowN.every((v, r) => v === rows[r]) && colN.every((v, c) => v === cols[c])) {
+          const key = [...sofa].sort((a, b) => a - b).join(",");
+          if (!seen.has(key)) { seen.add(key); found++; }
+        }
+        return;
+      }
+      for (const x of orth(R, C, T[k])) {
+        if (isTable.has(x) || sofa.has(x)) continue;
+        const r = Math.floor(x / C), c = x % C;
+        if (rowN[r] >= rows[r] || colN[c] >= cols[c]) continue;
+        if (king(R, C, x).some((y) => sofa.has(y))) continue;
+        sofa.add(x); rowN[r]++; colN[c]++;
+        go(k + 1);
+        sofa.delete(x); rowN[r]--; colN[c]--;
+      }
+    })(0);
+    return found;
+  }
+
+  function generate(R, C, n, rng) {
+    for (let attempt = 0; attempt < 5000; attempt++) {
+      const sofas = [], tables = [], used = new Set(), pair = {};
+      const cells = [...Array(R * C).keys()].sort(() => rng() - 0.5);
+      for (const x of cells) {
+        if (sofas.length === n) break;
+        if (used.has(x) || king(R, C, x).some((y) => sofas.includes(y))) continue;
+        const spots = orth(R, C, x).filter((y) => !used.has(y) && !sofas.includes(y));
+        if (!spots.length) continue;
+        const t = spots[Math.floor(rng() * spots.length)];
+        sofas.push(x); tables.push(t); used.add(x); used.add(t); pair[t] = x;
+      }
+      if (sofas.length < n) continue;
+      const rows = new Array(R).fill(0), cols = new Array(C).fill(0);
+      sofas.forEach((x) => { rows[Math.floor(x / C)]++; cols[x % C]++; });
+      if (countSolutions(R, C, tables, rows, cols, 2) === 1) return { R, C, tables, sofas, rows, cols, pair };
+    }
+    return null;
+  }
+
+  const api = { makeRng, orth, king, countSolutions, generate };
+  if (typeof module !== "undefined") module.exports = api; else root.Arrange = api;
+})(this);
+
+</script>
+<script>
+(() => {
+  const { makeRng, orth, king, generate } = window.Arrange;
+  const SIZES = { s: [5, 5, 4], m: [6, 6, 6], l: [7, 7, 8] };
+  const COLORS = [["#2f7f86", "#3fa0a8"], ["#c9962e", "#e0b04a"], ["#8a3b4f", "#a8546a"], ["#56703a", "#6f8f4c"], ["#3f4f8f", "#5468ad"]];
+  const AR = (n) => String(n).replace(/\d/g, (d) => "٠١٢٣٤٥٦٧٨٩"[d]);
+  const $ = (id) => document.getElementById(id);
+  const boardEl = $("board"), msgEl = $("msg"), roomEl = $("room");
+  let P, state, size = "s", hints = 0;   // state[i]: 0 empty, 1 sofa, 2 dot
+
+  const TABLE = `<svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="21" r="14" fill="rgba(0,0,0,.18)"/><circle cx="20" cy="20" r="14" fill="#8a5a35"/>
+    <circle cx="20" cy="20" r="11" fill="#a8744a"/><circle cx="20" cy="20" r="4" fill="#f4ecdc"/><path d="M20 12c2 3 2 5 0 8-2-3-2-5 0-8z" fill="#5fa36a"/></svg>`;
+  function sofaSVG(rot, k) {
+    const [base, cushion] = COLORS[k % COLORS.length];
+    return `<svg viewBox="0 0 40 40" aria-hidden="true"><g transform="rotate(${rot} 20 20)">
+      <rect x="3" y="7" width="34" height="26" rx="5" fill="${base}"/><rect x="3" y="7" width="34" height="8" rx="4" fill="${base}" stroke="rgba(0,0,0,.25)"/>
+      <rect x="3" y="11" width="6" height="22" rx="3" fill="${base}" stroke="rgba(0,0,0,.25)"/><rect x="31" y="11" width="6" height="22" rx="3" fill="${base}" stroke="rgba(0,0,0,.25)"/>
+      <rect x="9.5" y="15.5" width="10" height="15" rx="2.5" fill="${cushion}"/><rect x="20.5" y="15.5" width="10" height="15" rx="2.5" fill="${cushion}"/></g></svg>`;
+  }
+  // a sofa faces the table beside it: below 0°, left 90°, above 180°, right 270°
+  function facing(i) {
+    const { C } = P, tbl = new Set(P.tables);
+    const order = [[i + C, 0], [i - 1, 90], [i - C, 180], [i + 1, 270]];
+    for (const [j, rot] of order) {
+      if (!orth(P.R, P.C, i).includes(j) || !tbl.has(j)) continue;
+      return rot;
+    }
+    return 0;
+  }
+
+  function fit() {
+    const avail = Math.min(document.querySelector(".wrap").clientWidth, 600) - 44;
+    const cell = Math.max(34, Math.min(64, Math.floor(avail / (P.C + 0.7))));
+    document.documentElement.style.setProperty("--cell", cell + "px");
+  }
+
+  function newRoom(sz) {
+    if (sz) size = sz;
+    const [R, C, n] = SIZES[size];
+    P = generate(R, C, n, makeRng(Date.now() ^ Math.floor(Math.random() * 1e9)));
+    P.look = P.sofas.map(() => Math.floor(Math.random() * 5));
+    state = new Array(R * C).fill(0); hints = 0;
+    roomEl.classList.remove("won");
+    msgEl.className = "msg"; msgEl.textContent = "اضغط مربعًا مرة لتضع أريكة، ومرة ثانية لتضع نقطة «لا أريكة هنا».";
+    document.querySelectorAll("[data-size]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.size === size));
+    build();
+  }
+
+  function build() {
+    const { R, C } = P;
+    boardEl.style.setProperty("--cols", C);
+    let html = "";
+    for (let c = 0; c < C; c++) html += `<div class="clue top" data-col="${c}">${AR(P.cols[c])}</div>`;
+    html += `<div class="corner"></div>`;
+    const tbl = new Set(P.tables);
+    for (let r = 0; r < R; r++) {
+      for (let c = 0; c < C; c++) {
+        const i = r * C + c, alt = (r + c) % 2 ? " alt" : "";
+        html += tbl.has(i) ? `<div class="sq table${alt}" aria-label="طاولة">${TABLE}</div>`
+                           : `<button type="button" class="sq${alt}" data-i="${i}" aria-label="مربع فارغ"></button>`;
+      }
+      html += `<div class="clue" data-row="${r}">${AR(P.rows[r])}</div>`;
+    }
+    boardEl.innerHTML = html;
+    fit(); paint();
+  }
+
+  function paint() {
+    const { R, C } = P, tbl = new Set(P.tables);
+    const sofas = [];
+    state.forEach((v, i) => v === 1 && sofas.push(i));
+    const isSofa = new Set(sofas);
+    // per-sofa problems: touching another sofa, or no table beside it
+    const bad = new Set();
+    for (const s of sofas) {
+      if (king(R, C, s).some((y) => isSofa.has(y))) bad.add(s);
+      if (!orth(R, C, s).some((y) => tbl.has(y))) bad.add(s);
+    }
+    boardEl.querySelectorAll("button.sq").forEach((b) => {
+      const i = +b.dataset.i;
+      b.classList.toggle("bad", bad.has(i));
+      b.innerHTML = state[i] === 1 ? sofaSVG(facing(i), P.look[P.sofas.indexOf(i) >= 0 ? P.sofas.indexOf(i) : i]) : state[i] === 2 ? '<span class="dot"></span>' : "";
+      b.setAttribute("aria-label", state[i] === 1 ? "أريكة" : state[i] === 2 ? "لا أريكة هنا" : "مربع فارغ");
+    });
+    for (let r = 0; r < R; r++) {
+      const n = sofas.filter((s) => Math.floor(s / C) === r).length, el = boardEl.querySelector(`[data-row="${r}"]`);
+      el.classList.toggle("ok", n === P.rows[r]); el.classList.toggle("over", n > P.rows[r]);
+    }
+    for (let c = 0; c < C; c++) {
+      const n = sofas.filter((s) => s % C === c).length, el = boardEl.querySelector(`[data-col="${c}"]`);
+      el.classList.toggle("ok", n === P.cols[c]); el.classList.toggle("over", n > P.cols[c]);
+    }
+    if (solved(sofas, bad)) win();
+  }
+
+  // solved when every rule holds: counts match, no touching, and tables and sofas pair up one to one
+  function solved(sofas, bad) {
+    if (bad.size || sofas.length !== P.tables.length) return false;
+    const { R, C } = P;
+    for (let r = 0; r < R; r++) if (sofas.filter((s) => Math.floor(s / C) === r).length !== P.rows[r]) return false;
+    for (let c = 0; c < C; c++) if (sofas.filter((s) => s % C === c).length !== P.cols[c]) return false;
+    const match = new Map();
+    const tryAssign = (t, seen) => {
+      for (const s of orth(R, C, t)) {
+        if (!sofas.includes(s) || seen.has(s)) continue;
+        seen.add(s);
+        if (!match.has(s) || tryAssign(match.get(s), seen)) { match.set(s, t); return true; }
+      }
+      return false;
+    };
+    return P.tables.every((t) => tryAssign(t, new Set()));
+  }
+
+  function win() {
+    if (roomEl.classList.contains("won")) return;
+    roomEl.classList.add("won");
+    msgEl.className = "msg win";
+    msgEl.textContent = hints ? `أحسنت! رتّبت الغرفة كلها، مع ${AR(hints)} من التلميحات.` : "ممتاز! رتّبت الغرفة كلها بتفكيرك وحدك.";
+  }
+
+  boardEl.addEventListener("click", (e) => {
+    const b = e.target.closest("button.sq"); if (!b || roomEl.classList.contains("won")) return;
+    const i = +b.dataset.i;
+    state[i] = (state[i] + 1) % 3;
+    paint();
+  });
+  boardEl.addEventListener("contextmenu", (e) => {
+    const b = e.target.closest("button.sq"); if (!b) return;
+    e.preventDefault();
+    if (roomEl.classList.contains("won")) return;
+    const i = +b.dataset.i; state[i] = state[i] === 2 ? 0 : 2; paint();
+  });
+
+  $("hint").addEventListener("click", () => {
+    if (roomEl.classList.contains("won")) return;
+    const sol = new Set(P.sofas);
+    let i = state.findIndex((v, k) => v === 1 && !sol.has(k)), text = "هذه الأريكة ليست في مكانها. أين يمكن أن تكون؟";
+    if (i < 0) { i = P.sofas.find((k) => state[k] !== 1); text = "ضع أريكة في المربع المضيء بالأخضر. هل تعرف لماذا؟"; }
+    if (i === undefined) return;
+    hints++;
+    const b = boardEl.querySelector(`[data-i="${i}"]`);
+    boardEl.querySelectorAll(".hint").forEach((x) => x.classList.remove("hint"));
+    void b.offsetWidth; b.classList.add("hint");
+    msgEl.className = "msg"; msgEl.textContent = text;
+  });
+  $("clear").addEventListener("click", () => { state.fill(0); roomEl.classList.remove("won"); paint(); });
+  $("next").addEventListener("click", () => newRoom());
+  document.querySelectorAll("[data-size]").forEach((b) => b.addEventListener("click", () => newRoom(b.dataset.size)));
+  window.addEventListener("resize", fit);
+
+  window.claude?.hot?.snapshot?.(() => ({ P, state, size, hints }));
+  const boot = (d) => {
+    if (d && d.P) { P = d.P; state = d.state; size = d.size; hints = d.hints || 0;
+      document.querySelectorAll("[data-size]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.size === size)); build(); }
+    else newRoom("s");
+  };
+  window.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot(window.claude?.hot?.data ?? {});
+})();
+</script>
