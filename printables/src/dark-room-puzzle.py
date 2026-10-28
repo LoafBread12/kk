@@ -15,7 +15,10 @@ CW, RH = AW / COLS, AH / ROWS
 CX = X0 + AW / 2
 rng = random.Random(7)
 
-LINES = ["اسم البيعة", "التي كانت تحت", "الشجرة؟"]
+# one line per row of pieces, so every piece carries part of the question
+LINES = ["اسم", "البيعة", "التي كانت", "تحت", "الشجرة؟"]
+SIZES = [84, 72, 60, 84, 66]            # font size in mm, as big as each line allows
+assert len(LINES) == len(SIZES) == ROWS
 ANSWER = "الرضوان"
 
 
@@ -131,11 +134,11 @@ def art():
     for (x, y) in [(135, 330), (160, 340), (148, 318), (122, 350), (176, 350), (145, 350), (166, 322)]:
         o.append(f'<circle cx="{x}" cy="{y}" r="1.6" fill="#ffd98a" fill-opacity=".9"/>')
     # the question, lit from behind
-    ys = [138, 198, 258]
-    for i, (line, y) in enumerate(zip(LINES, ys)):
+    for i, (line, size) in enumerate(zip(LINES, SIZES)):
+        y = Y0 + (i + .5) * RH + size * .27
         for sw, op in ((7, .10), (4.2, .18)):
-            o.append(f'<text class="q" x="{CX}" y="{y}" fill="none" stroke="#ffcf70" stroke-opacity="{op}" stroke-width="{sw}" stroke-linejoin="round">{line}</text>')
-        o.append(f'<text class="q" x="{CX}" y="{y}" fill="#ffe08f" stroke="#6b3d00" stroke-width="1.1" stroke-linejoin="round" paint-order="stroke">{line}</text>')
+            o.append(f'<text class="q" style="font-size:{size}px" x="{CX}" y="{y:.1f}" fill="none" stroke="#ffcf70" stroke-opacity="{op}" stroke-width="{sw}" stroke-linejoin="round">{line}</text>')
+        o.append(f'<text class="q" style="font-size:{size}px" x="{CX}" y="{y:.1f}" fill="#ffe08f" stroke="#6b3d00" stroke-width="1.1" stroke-linejoin="round" paint-order="stroke">{line}</text>')
     return "\n".join(o)
 
 
@@ -144,7 +147,7 @@ def numbers():
     for r in range(ROWS):
         for c in range(COLS):
             n = r * COLS + c + 1
-            x, y = X0 + (c + .5) * CW, Y0 + (r + .5) * RH
+            x, y = X0 + c * CW + 9, Y0 + r * RH + 9
             o.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="5.2" fill="#fff" fill-opacity=".9" stroke="#222" stroke-width=".4"/>'
                      f'<text x="{x:.1f}" y="{y + 2.1:.1f}" text-anchor="middle" font-family="Tajawal" font-weight="800" font-size="6" fill="#222">{n}</text>')
     return "".join(o)
