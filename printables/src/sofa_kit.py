@@ -1,0 +1,276 @@
+"""Builds ../sofa-room-kit.html: a printable paper version of the Sofa Room game.
+
+Every board is checked to be solvable from its star square using only the simplest
+rule (a number whose sofas are all found -> the rest are safe; a number equal to its
+dark neighbours -> they are all sofas), so children never need to guess.
+"""
+import random
+from pathlib import Path
+
+SOFA_COLORS = [("#2f7f86", "#3fa0a8"), ("#c9962e", "#e0b04a"), ("#8a3b4f", "#a8546a"), ("#56703a", "#6f8f4c"), ("#3f4f8f", "#5468ad")]
+NUM_COLORS = {1: "#1d4f91", 2: "#2d6a36", 3: "#a3302a", 4: "#5b2a86", 5: "#7a2a1d", 6: "#176b6b", 7: "#222", 8: "#555"}
+AR = "٠١٢٣٤٥٦٧٨٩"
+
+
+def ar(n):
+    return "".join(AR[int(d)] for d in str(n))
+
+
+def nb(R, C, i):
+    r, c = divmod(i, C)
+    return [(r + dr) * C + c + dc for dr in (-1, 0, 1) for dc in (-1, 0, 1)
+            if (dr or dc) and 0 <= r + dr < R and 0 <= c + dc < C]
+
+
+def solvable(R, C, sofas, start, total):
+    num = [-1 if m else sum(sofas[j] for j in nb(R, C, i)) for i, m in enumerate(sofas)]
+    state = [0] * (R * C)  # 0 dark, 1 open, 2 known sofa
+
+    def flood(i):
+        stack = [i]
+        while stack:
+            k = stack.pop()
+            if state[k]:
+                continue
+            state[k] = 1
+            if num[k] == 0:
+                stack += [j for j in nb(R, C, k) if not state[j]]
+
+    flood(start)
+    while True:
+        safe, sofa = set(), set()
+        for i in range(R * C):
+            if state[i] != 1 or num[i] <= 0:
+                continue
+            dark = [j for j in nb(R, C, i) if state[j] == 0]
+            need = num[i] - sum(state[j] == 2 for j in nb(R, C, i))
+            if dark and need == 0:
+                safe.update(dark)
+            elif dark and need == len(dark):
+                sofa.update(dark)
+        unknown = [i for i in range(R * C) if state[i] == 0]
+        left = total - state.count(2)
+        if not safe and not sofa and unknown:
+            if left == 0:
+                safe.update(unknown)
+            elif left == len(unknown):
+                sofa.update(unknown)
+        if not safe and not sofa:
+            break
+        for i in sofa:
+            state[i] = 2
+        for i in safe:
+            flood(i)
+    return all(m or state[i] == 1 for i, m in enumerate(sofas)), num
+
+
+def make_board(R, C, M, rng):
+    inner = [r * C + c for r in range(1, R - 1) for c in range(1, C - 1)]
+    while True:
+        start = rng.choice(inner)
+        ban = {start, *nb(R, C, start)}
+        pool = [i for i in range(R * C) if i not in ban]
+        chosen = set(rng.sample(pool, M))
+        sofas = [i in chosen for i in range(R * C)]
+        ok, num = solvable(R, C, sofas, start, M)
+        if ok:
+            return sofas, num, start
+
+
+def sofa_svg(color, rot):
+    base, cushion = SOFA_COLORS[color]
+    return (f'<svg viewBox="0 0 40 40"><g transform="rotate({rot} 20 20)">'
+            f'<rect x="3" y="9" width="34" height="24" rx="5" fill="{base}"/>'
+            f'<rect x="3" y="9" width="34" height="7" rx="3.5" fill="{base}" stroke="rgba(0,0,0,.25)"/>'
+            f'<rect x="3" y="12" width="6" height="21" rx="3" fill="{base}" stroke="rgba(0,0,0,.25)"/>'
+            f'<rect x="31" y="12" width="6" height="21" rx="3" fill="{base}" stroke="rgba(0,0,0,.25)"/>'
+            f'<rect x="9.5" y="16.5" width="10" height="14" rx="2.5" fill="{cushion}"/>'
+            f'<rect x="20.5" y="16.5" width="10" height="14" rx="2.5" fill="{cushion}"/></g></svg>')
+
+
+LAMP = ('<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="19" fill="#fff4cf" stroke="#c9a35a" stroke-width="1.5"/>'
+        '<circle cx="20" cy="17" r="12" fill="#ffd98a" opacity=".45"/>'
+        '<path d="M12 21h16l-4-11h-8z" fill="#f2b630"/><path d="M19 21h2v8h-2z" fill="#8f7444"/>'
+        '<path d="M13 29h14v3H13z" fill="#6b5530"/></svg>')
+STAR = ('<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="19" fill="#fff" stroke="#c9a35a" stroke-width="1.5"/>'
+        '<path d="M20 6l4.1 8.6 9.4 1.2-6.9 6.5 1.8 9.3L20 27l-8.4 4.6 1.8-9.3-6.9-6.5 9.4-1.2z" fill="#f2b630"/></svg>')
+
+
+def board_page(n, R, C, M, rng):
+    sofas, num, start = make_board(R, C, M, rng)
+    cells = []
+    for i, m in enumerate(sofas):
+        if m:
+            cells.append(f'<div class="sq">{sofa_svg(rng.randrange(5), rng.choice((0, 90, 180, 270)))}</div>')
+            continue
+        k = num[i]
+        star = '<span class="st">★</span>' if i == start else ""
+        body = (f'<b style="color:{NUM_COLORS[k]}">{ar(k)}</b><span class="dots">'
+                + f'<i style="background:{NUM_COLORS[k]}"></i>' * k + "</span>") if k else ""
+        cells.append(f'<div class="sq">{star}{body}</div>')
+    return f'''
+<section class="page board">
+  <div class="bhead"><h2>الغرفة {ar(n)}</h2><span class="tag">{ar(R)}×{ar(C)}</span><span class="tag">فيها {ar(M)} أرائك</span></div>
+  <div class="room" style="--cols:{C}">
+    <div class="window"></div><div class="door"></div>
+    <div class="grid">{"".join(cells)}</div>
+  </div>
+  <p class="foot">ألصِق فوق كل مربع غطاءً داكنًا، وضع النجمة على غطاء المربع الذي فيه ★. لا يرى اللاعبون هذه الصفحة قبل اللعب.</p>
+</section>'''
+
+
+def covers_page():
+    covers = "".join('<div class="cover"><span class="glue">ألصِق هنا</span></div>' for _ in range(48))
+    return f'''
+<section class="page">
+  <div class="bhead"><h2>الأغطية الداكنة</h2><span class="tag">٤٨ غطاءً</span></div>
+  <p class="lead">قُصّ على الخطوط. ضع الصمغ على الشريط العلوي فقط، حتى يُرفع الغطاء مثل الباب الصغير.</p>
+  <div class="covers">{covers}</div>
+</section>'''
+
+
+def tokens_page():
+    lamps = "".join(f'<div class="tok">{LAMP}</div>' for _ in range(20))
+    stars = "".join(f'<div class="tok">{STAR}</div>' for _ in range(4))
+    big = "".join(f'<div class="bigsofa">{sofa_svg(k, 0)}</div>' for k in range(4))
+    return f'''
+<section class="page">
+  <div class="bhead"><h2>المصابيح والنجوم</h2></div>
+  <p class="lead">المصباح يضعه اللاعب على غطاءٍ يعرف أن تحته أريكة. النجمة توضع على غطاء مربع البداية.</p>
+  <div class="tokens">{lamps}{stars}</div>
+  <div class="bhead small"><h2>أرائك كبيرة للعب على أرض الصف</h2></div>
+  <div class="bigs">{big}</div>
+</section>'''
+
+
+def guide_page():
+    return '''
+<section class="page guide">
+  <header class="cover-head">
+    <h1>غرفة الأرائك</h1>
+    <p>لعبة تفكير من الورق: أضئ الغرفة المظلمة، واكتشف أين تختبئ الأرائك.</p>
+  </header>
+
+  <div class="cols">
+    <div class="box">
+      <h3>تحتاج إلى</h3>
+      <ul>
+        <li>هذه الأوراق مطبوعة بالألوان.</li>
+        <li>مقصّ وصمغ، أو أوراق ملاحظات لاصقة صغيرة بدل الأغطية.</li>
+        <li>ورقة مقوّاة تلصق عليها لوحة الغرفة (اختياري).</li>
+      </ul>
+    </div>
+    <div class="box">
+      <h3>اصنع اللعبة</h3>
+      <ol>
+        <li>اختر غرفة من الغرف الأربع.</li>
+        <li>قُصّ الأغطية الداكنة.</li>
+        <li>ألصق غطاءً فوق كل مربع، والصمغ على أعلاه فقط.</li>
+        <li>ضع النجمة على غطاء المربع الذي فيه ★.</li>
+      </ol>
+      <div class="flap" aria-hidden="true"><div class="under"><b>٢</b></div><div class="lid"></div></div>
+    </div>
+  </div>
+
+  <div class="box play">
+    <h3>كيف نلعب؟</h3>
+    <ol class="big">
+      <li><span>ابدأ برفع غطاء <b>النجمة</b>.</span></li>
+      <li><span>الرقم والنقاط = <b>كم أريكة حول هذا المربع</b>. المربع الفارغ: لا أرائك حوله، فارفع كل الأغطية التي حوله.</span></li>
+      <li><span>عرفت أن تحت غطاء أريكة؟ ضع عليه <b>مصباحًا</b> ولا ترفعه.</span></li>
+      <li><span>إذا رفعت غطاء أريكة انتهت اللعبة، فابدأ غرفة أخرى.</span></li>
+      <li><span>تفوز إذا رفعت كل الأغطية التي ليس تحتها أرائك.</span></li>
+    </ol>
+    <p class="promise">كل غرفة هنا تُحلّ بالتفكير وحده، ولا تحتاج إلى التخمين أبدًا.</p>
+  </div>
+
+  <div class="box">
+    <h3>اللعب على أرض الصف</h3>
+    <p>ارسموا شبكة كبيرة على الأرض بشريط لاصق، وانسخوا إحدى الغرف: اكتبوا الأرقام على أوراق، وضعوا الأرائك الكبيرة من الصفحة الأخيرة، ثم غطّوا كل مربع بورقة. يقف الأطفال في فريقين، ويختار كل فريق في دوره غطاءً يرفعه.</p>
+  </div>
+</section>'''
+
+
+CSS = '''
+@page { size: A4; margin: 0; }
+:root { --ink: #22202a; --muted: #6a6474; --wall: #3b2c3f; --wood: #e7c48f; --wood2: #d6a965; --night: #1f2538; --night2: #2e3656; --glow: #f2b630; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: #e8e6ea; }
+body { font-family: "Readex Pro", sans-serif; color: var(--ink); direction: rtl; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.page { width: 210mm; height: 297mm; margin: 10mm auto; padding: 12mm 13mm; background: #fff; display: flex; flex-direction: column; gap: 6mm;
+        overflow: hidden; break-after: page; box-shadow: 0 2px 12px rgba(0,0,0,.12); }
+@media print { html, body { background: #fff; } .page { margin: 0; box-shadow: none; } }
+h1, h2 { font-family: "Lalezar", "Readex Pro", sans-serif; font-weight: 400; }
+.bhead { display: flex; align-items: center; gap: 3mm; border-bottom: 2px solid var(--ink); padding-bottom: 2mm; }
+.bhead h2 { font-size: 24pt; line-height: 1; }
+.bhead.small h2 { font-size: 16pt; }
+.tag { border: 1.5px solid var(--ink); border-radius: 20px; padding: .6mm 3mm; font-size: 10pt; font-weight: 600; }
+.lead { font-size: 11pt; color: var(--muted); }
+
+/* board */
+.board { align-items: center; }
+.board .bhead { align-self: stretch; }
+.room { position: relative; padding: 8mm; background: var(--wall); border-radius: 2mm; margin-top: 4mm; }
+.room .window { position: absolute; top: 1.5mm; left: 50%; transform: translateX(-50%); width: 35%; height: 4mm; background: linear-gradient(90deg, #a9c8ff 0 49%, #5a4560 49% 51%, #a9c8ff 51%); border-radius: 1mm; }
+.room .door { position: absolute; left: 1.5mm; top: 40%; width: 4mm; height: 22mm; background: #6b4a2f; border-radius: 1mm; }
+.grid { display: grid; grid-template-columns: repeat(var(--cols), 27mm); grid-auto-rows: 27mm; outline: 1.2mm solid #5a4560; }
+.sq { background: linear-gradient(var(--wood), var(--wood2)); border: .3mm solid #a77a42; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
+.sq b { font-size: 26pt; font-weight: 800; line-height: 1; }
+.sq .dots { display: flex; gap: 1.2mm; margin-top: 1.5mm; flex-wrap: wrap; justify-content: center; max-width: 70%; }
+.sq .dots i { width: 2.6mm; height: 2.6mm; border-radius: 50%; }
+.sq svg { width: 82%; height: 82%; }
+.sq .st { position: absolute; top: 1mm; right: 1.5mm; font-size: 14pt; color: #c98a10; }
+.foot { margin-top: auto; font-size: 10pt; color: var(--muted); text-align: center; }
+
+/* covers */
+.covers { display: grid; grid-template-columns: repeat(6, 27mm); grid-auto-rows: 27mm; justify-content: center; }
+.cover { border: .3mm dashed #9aa0b4; position: relative;
+         background: radial-gradient(circle at 70% 60%, #ffffff22 0 .5mm, transparent .7mm), radial-gradient(circle at 25% 75%, #ffffff1c 0 .4mm, transparent .6mm),
+                     radial-gradient(circle at 80% 85%, #ffffff18 0 .3mm, transparent .5mm), linear-gradient(145deg, var(--night2), var(--night)); }
+.glue { position: absolute; top: 0; inset-inline: 0; height: 5mm; border-bottom: .3mm dashed #ffffff55; color: #ffffffaa; font-size: 6.5pt; display: grid; place-items: center; }
+
+/* tokens */
+.tokens { display: grid; grid-template-columns: repeat(6, 23mm); grid-auto-rows: 23mm; gap: 3mm; justify-content: center; }
+.tok svg { width: 100%; height: 100%; }
+.bigs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4mm; flex: 1; min-height: 0; }
+.bigsofa { border: .4mm dashed #9aa0b4; border-radius: 2mm; display: grid; place-items: center; background: linear-gradient(var(--wood), var(--wood2)); }
+.bigsofa svg { width: 70%; height: 70%; }
+
+/* guide */
+.cover-head { background: var(--night); color: #fff; border-radius: 4mm; padding: 8mm; text-align: center;
+              background-image: radial-gradient(circle at 15% 30%, #ffffff40 0 .6mm, transparent .8mm), radial-gradient(circle at 80% 25%, #ffffff30 0 .5mm, transparent .7mm), radial-gradient(circle at 60% 75%, #ffffff30 0 .5mm, transparent .7mm); }
+.cover-head h1 { font-size: 46pt; color: #ffd98a; line-height: 1; }
+.cover-head p { margin-top: 2mm; font-size: 12pt; color: #e6e1f0; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; }
+.box { border: .4mm solid #d9d4e0; border-radius: 3mm; padding: 4mm 5mm; }
+.box h3 { font-family: "Lalezar", sans-serif; font-weight: 400; font-size: 17pt; color: var(--wall); margin-bottom: 1.5mm; }
+.box ul, .box ol { padding-inline-start: 5mm; font-size: 11pt; line-height: 1.7; }
+.box ol { list-style: arabic-indic; }
+.box p { font-size: 11pt; line-height: 1.7; }
+.flap { position: relative; width: 22mm; height: 22mm; margin: 3mm auto 0; }
+.flap .under { position: absolute; inset: 0; background: linear-gradient(var(--wood), var(--wood2)); display: grid; place-items: end center; padding-bottom: 1.5mm; font-size: 18pt; color: #2d6a36; border: .3mm solid #a77a42; }
+.flap .lid { position: absolute; inset: 0; background: linear-gradient(145deg, var(--night2), var(--night)); transform-origin: top; transform: perspective(40mm) rotateX(-62deg); box-shadow: 0 2mm 3mm rgba(0,0,0,.25); }
+.play { background: #fff9ec; border-color: #f0dcae; }
+ol.big { list-style: none; padding: 0; counter-reset: s; display: grid; gap: 2mm; }
+ol.big li { counter-increment: s; display: flex; gap: 3mm; align-items: center; font-size: 12.5pt; line-height: 1.5; }
+ol.big li::before { content: counter(s, arabic-indic); flex: none; width: 8mm; height: 8mm; border-radius: 50%; background: var(--glow); color: #2a2030; font-weight: 800; display: grid; place-items: center; }
+.promise { margin-top: 3mm; font-weight: 600; color: #2d6a36; }
+'''
+
+
+def build():
+    rng = random.Random(20261028)
+    pages = [guide_page()]
+    for n, (R, C, M) in enumerate([(5, 5, 3), (5, 5, 4), (6, 6, 5), (6, 6, 6)], 1):
+        pages.append(board_page(n, R, C, M, rng))
+    pages += [covers_page(), tokens_page()]
+    html = f'''<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>غرفة الأرائك: النسخة الورقية</title>
+<link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Readex+Pro:wght@400;600;800&display=swap" rel="stylesheet">
+<style>{CSS}</style></head><body>{"".join(pages)}</body></html>'''
+    (Path(__file__).parent.parent / "sofa-room-kit.html").write_text(html)
+
+
+if __name__ == "__main__":
+    build()
