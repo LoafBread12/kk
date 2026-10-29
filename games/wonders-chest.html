@@ -55,7 +55,7 @@
   .slots span { width: 56px; height: 66px; border-radius: 12px; background: #0e1022; border: 2px solid var(--line); display: grid; place-items: center;
                 font: 800 36px var(--body); color: var(--gold); }
   .marks { direction: ltr; display: flex; justify-content: center; gap: 10px; margin-bottom: -6px; }
-  .marks i { width: 56px; display: grid; place-items: center; font-style: normal; font-size: 24px; color: var(--c); height: 30px; }
+  .marks i { width: 56px; display: grid; place-items: center; font-style: normal; font-size: 22px; letter-spacing: -2px; color: var(--c); height: 30px; }
   .marks svg { width: 26px; height: 26px; }
   .slots.shake { animation: shake .4s; }
   @keyframes shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
@@ -97,7 +97,7 @@
 <div class="wrap">
   <header>
     <h1>صندوق العجائب</h1>
-    <p class="sub">أربعة أقفال، وأربع بطاقات مخبّأة في الصف. حُلّ لغز كل بطاقة لتفتح قفلها!</p>
+    <p class="sub">أربعة أقفال عن الكواكب والنبات وجسمك والماء، وأربع بطاقات مخبّأة في الصف. حُلّ لغز كل بطاقة لتفتح قفلها!</p>
   </header>
 
   <div class="chest" id="chest" aria-hidden="true">
@@ -145,24 +145,26 @@
 <script>
 (() => {
   const LOCKS = [
-    { name: "قفل الرموز", color: "var(--water)", code: "713", icon: "drop", marks: ["drop", "sun", "leaf"],
-      ask: "فُكّ الرموز في البطاقة ١ بمفتاح الرموز.",
-      fact: "قطرة الماء إذا تجمّدت كبُر حجمها، ولهذا يطفو الثلج فوق الماء." },
-    { name: "قفل الأنماط", color: "var(--leaf)", code: "92", icon: "leaf", marks: ["■", "●"],
-      ask: "أكمل النمطين في البطاقة ٢، واكتب الرقمين بالترتيب.",
-      fact: "أوراق كثير من النباتات تنمو على الساق بترتيب منتظم، حتى لا تحجب إحداها الشمس عن الأخرى." },
-    { name: "قفل المنطق", color: "var(--sun)", code: "261", icon: "sun", marks: ["■", "▲", "●"],
-      ask: "استعمل أدلة البطاقة ٣ لتعرف الرقم السري.",
-      fact: "النبات يصنع غذاءه في أوراقه من ضوء الشمس والماء والهواء." },
-    { name: "قفل العجائب", color: "var(--snow)", code: "652", icon: "snow", marks: ["■", "▲", "●"],
-      ask: "أجب عن أسئلة البطاقة ٤، واكتب الأجوبة بالترتيب.",
-      fact: "لكل ندفة ثلج ستة أضلاع، ولا تكاد تتشابه ندفتان." },
+    { name: "قفل الكواكب", color: "var(--snow)", code: "463", icon: "planet", marks: ["■", "▲", "●"],
+      ask: "اعرف كل كوكب في البطاقة ١، وعُدّ مكانه من الشمس.",
+      fact: "الأرض هي الكوكب الوحيد الذي نعرف أن على سطحه ماءً سائلًا وحياة." },
+    { name: "قفل النبات", color: "var(--leaf)", code: "3158", icon: "leaf", marks: ["•", "••", "•••", "••••"],
+      ask: "رتّب مراحل نمو النبتة في البطاقة ٢، واكتب أرقامها بالترتيب.",
+      fact: "يخرج الجذر من البذرة قبل الساق، ليثبّت النبتة في التربة ويشرب الماء." },
+    { name: "قفل جسمي", color: "var(--sun)", code: "246", icon: "heart", marks: ["■", "▲", "●"],
+      ask: "أجب عن أسئلة البطاقة ٣ عن جسمك.",
+      fact: "قلبك ينبض نحو مئة ألف مرة في اليوم، ولا يستريح أبدًا." },
+    { name: "قفل الماء", color: "var(--water)", code: "421", icon: "drop", marks: ["■", "▲", "●"],
+      ask: "اتبع رحلة قطرة الماء في البطاقة ٤.",
+      fact: "الماء الذي تشربه اليوم يدور في الأرض منذ زمن بعيد: يتبخّر، ثم يصير سحابًا، ثم ينزل مطرًا." },
   ];
   const AR = (s) => String(s).replace(/\d/g, (d) => "٠١٢٣٤٥٦٧٨٩"[d]);
   const ICONS = {
     drop: '<path d="M14 2C9 9 6 13 6 17a8 8 0 0 0 16 0c0-4-3-8-8-15z" fill="#4fa3e0"/>',
     leaf: '<path d="M4 22C4 10 12 4 24 4c0 12-6 20-18 20" fill="#5bb36a"/><path d="M5 23L18 10" stroke="#2d6a36" stroke-width="2"/>',
     sun: '<circle cx="14" cy="14" r="6" fill="#f0a23a"/><g stroke="#f0a23a" stroke-width="2.4" stroke-linecap="round"><path d="M14 2v3M14 23v3M2 14h3M23 14h3M5.5 5.5l2 2M20.5 20.5l2 2M5.5 22.5l2-2M20.5 7.5l2-2"/></g>',
+    planet: '<circle cx="14" cy="14" r="7" fill="#a98be6"/><ellipse cx="14" cy="14" rx="13" ry="4" fill="none" stroke="#a98be6" stroke-width="2" transform="rotate(-20 14 14)"/>',
+    heart: '<path d="M14 24C6 18 3 14 3 10a5.5 5.5 0 0 1 11-1 5.5 5.5 0 0 1 11 1c0 4-3 8-11 14z" fill="#f0a23a"/>',
     snow: '<g stroke="#a98be6" stroke-width="2.4" stroke-linecap="round"><path d="M14 2v24M3.6 8l20.8 12M3.6 20L24.4 8M14 6l-3-3M14 6l3-3M14 22l-3 3M14 22l3 3"/></g>',
   };
   const lockSVG = (l) => `<svg viewBox="0 0 54 62" aria-hidden="true">

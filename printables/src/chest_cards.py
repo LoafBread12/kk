@@ -1,6 +1,6 @@
 """Builds ../wonders-chest-cards.html: the four puzzle cards for the "صندوق العجائب" hunt, plus a teacher page.
 
-Codes must match games/wonders-chest.html: 713, 92, 261, 652.
+Codes must match games/wonders-chest.html: 463, 3158, 246, 421.
 Every answer box on a card carries the same mark (shape or icon) as the matching box on screen,
 read left to right as on screen, so children never wonder which digit goes where.
 """
@@ -10,6 +10,8 @@ ICONS = {
     "drop": '<path d="M14 2C9 9 6 13 6 17a8 8 0 0 0 16 0c0-4-3-8-8-15z" fill="#4fa3e0"/>',
     "leaf": '<path d="M4 22C4 10 12 4 24 4c0 12-6 20-18 20" fill="#5bb36a"/><path d="M5 23L18 10" stroke="#2d6a36" stroke-width="2"/>',
     "sun": '<circle cx="14" cy="14" r="6" fill="#f0a23a"/><g stroke="#f0a23a" stroke-width="2.4" stroke-linecap="round"><path d="M14 2v3M14 23v3M2 14h3M23 14h3M5.5 5.5l2 2M20.5 20.5l2 2M5.5 22.5l2-2M20.5 7.5l2-2"/></g>',
+    "planet": '<circle cx="14" cy="14" r="7" fill="#a98be6"/><ellipse cx="14" cy="14" rx="13" ry="4" fill="none" stroke="#a98be6" stroke-width="2" transform="rotate(-20 14 14)"/>',
+    "heart": '<path d="M14 24C6 18 3 14 3 10a5.5 5.5 0 0 1 11-1 5.5 5.5 0 0 1 11 1c0 4-3 8-11 14z" fill="#f0a23a"/>',
     "snow": '<g stroke="#a98be6" stroke-width="2.4" stroke-linecap="round"><path d="M14 2v24M3.6 8l20.8 12M3.6 20L24.4 8M14 6l-3-3M14 6l3-3M14 22l-3 3M14 22l3 3"/></g>',
     "flower": '<g fill="#e46f9a"><circle cx="14" cy="8" r="5"/><circle cx="20" cy="14" r="5"/><circle cx="14" cy="20" r="5"/><circle cx="8" cy="14" r="5"/></g><circle cx="14" cy="14" r="4" fill="#f4c04e"/>',
     "mountain": '<path d="M2 24L11 8l5 8 3-4 7 12z" fill="#8a8fa8"/><path d="M11 8l3 5-3 2-2-3z" fill="#fff"/>',
@@ -31,33 +33,74 @@ def card(n, title, color, icon_key, body, marks):
 </div>'''
 
 
-key = "".join(f'<div class="k">{icon(k, "8mm")}<b>{d}</b></div>' for k, d in
-              [("drop", "٧"), ("sun", "١"), ("leaf", "٣"), ("flower", "٥"), ("snow", "٩"), ("mountain", "٢")])
-c1 = card(1, "قفل الرموز", "#4fa3e0", "drop", f'''
-  <p>لكل رمز رقم. استعمل المفتاح لتعرف رقم كل رمز في الأسفل.</p>
-  <div class="key">{key}</div>''', ["drop", "sun", "leaf"])
+PLANETS = [("عطارد", "#9a9aa6", ""), ("الزهرة", "#e8c77a", ""), ("الأرض", "#3d8fe0", "earth"), ("المريخ", "#d0573a", ""),
+           ("المشتري", "#d9a066", "bands"), ("زحل", "#e3c16b", "ring"), ("أورانوس", "#8fd6e0", ""), ("نبتون", "#3f5fd0", "")]
 
-c2 = card(2, "قفل الأنماط", "#5bb36a", "leaf", '''
-  <p>أكمل كل نمط، واكتب الرقم الناقص في مربّعه.</p>
-  <div class="pat"><span class="m">■</span><span>١ ، ٣ ، ٥ ، ٧ ، <em>؟</em></span></div>
-  <div class="pat"><span class="m">●</span><span>١٠ ، ٨ ، ٦ ، ٤ ، <em>؟</em></span></div>''', ["■", "●"])
 
-c3 = card(3, "قفل المنطق", "#f0a23a", "sun", '''
-  <p>في كل شكل رقم واحد. اقرأ الأدلة كلها:</p>
+def planet(color, kind, size="9mm"):
+    extra = ""
+    if kind == "earth":
+        extra = '<path d="M9 10c3-2 6 0 5 3s-4 2-5 5-3-1-3-3 1-4 3-5zM17 17c2-1 4 0 3 2s-3 2-4 1z" fill="#5bb36a"/>'
+    elif kind == "bands":
+        extra = '<path d="M4 11h20M3.6 16h20.8" stroke="#b07a42" stroke-width="2"/>'
+    ring = '<ellipse cx="14" cy="14" rx="13.5" ry="4" fill="none" stroke="#b8963f" stroke-width="2" transform="rotate(-20 14 14)"/>' if kind == "ring" else ""
+    r = 8 if kind == "ring" else 10
+    return f'<svg viewBox="0 0 28 28" style="width:{size};height:{size};overflow:visible"><circle cx="14" cy="14" r="{r}" fill="{color}"/>{extra}{ring}</svg>'
+
+
+SUN = '<svg viewBox="0 0 28 28" style="width:11mm;height:11mm"><circle cx="14" cy="14" r="11" fill="#f4c04e"/><circle cx="14" cy="14" r="7" fill="#f8d77a"/></svg>'
+strip = SUN + "".join(f'<div class="pl">{planet(c, k, "7.5mm")}<small>{n}</small></div>' for n, c, k in PLANETS)
+c1 = card(1, "قفل الكواكب", "#a98be6", "planet", f"""
+  <p>هذه الكواكب بالترتيب، من الأقرب إلى الشمس إلى الأبعد:</p>
+  <div class="strip">{strip}</div>
+  <p>اعرف كل كوكب، ثم عُدّ مكانه من الشمس. (الأقرب إلى الشمس رقمه ١)</p>
   <ul class="clues">
-    <li>الأرقام الثلاثة <b>مختلفة</b>، وليس فيها صفر.</li>
-    <li>رقم <b>■</b> ضعف رقم <b>●</b>.</li>
-    <li>رقم <b>▲</b> أكبر من رقم <b>■</b>.</li>
-    <li>مجموع الأرقام الثلاثة <b>٩</b>.</li>
-  </ul>''', ["■", "▲", "●"])
+    <li><b>■</b> الكوكب الأحمر.</li>
+    <li><b>▲</b> الكوكب الذي حوله حلقات كبيرة.</li>
+    <li><b>●</b> الكوكب الذي نعيش عليه.</li>
+  </ul>""", ["■", "▲", "●"])
 
-c4 = card(4, "قفل العجائب", "#a98be6", "snow", '''
-  <p>تذكّر عجائب الخلق، واكتب كل جواب في مربّعه:</p>
+SOIL = '<rect x="0" y="40" width="60" height="20" fill="#b98a5a"/><path d="M0 40h60" stroke="#8a5f36" stroke-width="2"/>'
+STAGES = {
+    "seed": SOIL + '<ellipse cx="30" cy="48" rx="7" ry="4.5" fill="#7a4a24"/>',
+    "root": SOIL + '<ellipse cx="30" cy="46" rx="7" ry="4.5" fill="#7a4a24"/><path d="M30 50c0 3-2 5-1 9M30 52c3 2 5 3 7 6" stroke="#f1e3c8" stroke-width="2" fill="none" stroke-linecap="round"/>',
+    "sprout": SOIL + '<path d="M30 52V26" stroke="#3f8a4b" stroke-width="3"/><path d="M30 32c-10-1-14-7-14-12 8 0 13 5 14 12zM30 30c9-2 13-8 13-13-8 0-12 6-13 13z" fill="#5bb36a"/><path d="M30 52c0 3-2 5-1 7M30 53c3 2 5 3 6 6" stroke="#f1e3c8" stroke-width="2" fill="none"/>',
+    "flower": SOIL + '<path d="M30 52V18" stroke="#3f8a4b" stroke-width="3"/><path d="M30 40c-10-1-14-6-14-11 8 0 13 4 14 11zM30 34c9-2 13-7 13-12-8 0-12 5-13 12z" fill="#5bb36a"/><g fill="#e46f9a"><circle cx="30" cy="9" r="5"/><circle cx="36" cy="14" r="5"/><circle cx="30" cy="19" r="5"/><circle cx="24" cy="14" r="5"/></g><circle cx="30" cy="14" r="3.5" fill="#f4c04e"/>',
+}
+pics = "".join(f'<div class="stage"><svg viewBox="0 0 60 60">{STAGES[k]}</svg><b>{d}</b></div>' for k, d in
+               [("flower", "٨"), ("root", "١"), ("seed", "٣"), ("sprout", "٥")])
+c2 = card(2, "قفل النبات", "#5bb36a", "leaf", f"""
+  <p>هذه مراحل نمو نبتة واحدة، لكنها مخلوطة! رتّبها من البداية إلى النهاية، واكتب رقم كل مرحلة في مربّعها.</p>
+  <div class="stages">{pics}</div>
+  <p class="small">المرحلة الأولى في المربع ذي النقطة الواحدة، والثانية في المربع ذي النقطتين، وهكذا.</p>""", ["•", "••", "•••", "••••"])
+
+c3 = card(3, "قفل جسمي", "#f0a23a", "heart", """
+  <p>فكّر في جسمك، واكتب كل جواب في مربّعه:</p>
   <ul class="clues">
-    <li><b>■</b> كم ضلعًا لندفة الثلج؟</li>
-    <li><b>▲</b> كم حاسّة للإنسان؟</li>
-    <li><b>●</b> كم رئة في صدرك؟</li>
-  </ul>''', ["■", "▲", "●"])
+    <li><b>■</b> كم رئة في صدرك؟</li>
+    <li><b>▲</b> في القلب حجرات، وعددها <b>ضعف</b> عدد الرئتين. كم حجرة في القلب؟</li>
+    <li><b>●</b> اجمع رقم <b>■</b> ورقم <b>▲</b>.</li>
+  </ul>""", ["■", "▲", "●"])
+
+CYCLE = """<svg class="cycle" viewBox="0 0 200 120">
+  <defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5 0 10z" fill="#4fa3e0"/></marker></defs>
+  <path d="M0 100q50-10 100 0t100 0v20H0z" fill="#7cc0ef"/>
+  <g fill="#fff" stroke="#b8c7d8" stroke-width="1.5"><circle cx="88" cy="22" r="11"/><circle cx="102" cy="16" r="13"/><circle cx="117" cy="24" r="10"/><rect x="84" y="22" width="36" height="12" rx="6" stroke="none"/></g>
+  <circle cx="176" cy="20" r="10" fill="#f4c04e"/>
+  <path d="M46 90C40 70 50 40 76 30" fill="none" stroke="#4fa3e0" stroke-width="2.5" stroke-dasharray="4 4" marker-end="url(#ar)"/>
+  <path d="M130 34c14 10 20 30 18 52" fill="none" stroke="#4fa3e0" stroke-width="2.5" marker-end="url(#ar)"/>
+  <g fill="#4fa3e0"><path d="M150 50l-2 6h4z"/><path d="M160 60l-2 6h4z"/><path d="M142 66l-2 6h4z"/></g>
+  <g font-family="Readex Pro" font-weight="800" font-size="11" text-anchor="middle" fill="#1d4f91">
+    <text x="100" y="114">١ البحر</text><text x="34" y="60">٢ يتبخّر</text><text x="104" y="48">٣ سحابة</text><text x="172" y="88">٤ مطر</text></g>
+</svg>"""
+c4 = card(4, "قفل الماء", "#4fa3e0", "drop", f"""
+  <p>هذه رحلة قطرة الماء. اتبع الأسهم:</p>
+  {CYCLE}
+  <ul class="clues">
+    <li><b>■</b> القطرة الآن في السحابة. ما رقم الخطوة التي بعدها؟</li>
+    <li><b>▲</b> ما رقم الخطوة التي قبل السحابة؟</li>
+    <li><b>●</b> نزل المطر في البحر. ما رقم الخطوة التي تبدأ بها الرحلة من جديد؟</li>
+  </ul>""", ["■", "▲", "●"])
 
 teacher = '''
 <section class="page teacher">
@@ -76,12 +119,12 @@ teacher = '''
     <p>إذا أخطؤوا ثلاث مرات في قفل، تنتظر الشاشة خمس ثوانٍ، حتى يفكّروا بدل أن يجرّبوا أرقامًا.</p></div>
   <div class="box ans"><h3>الأجوبة</h3>
     <div class="grid4">
-      <div><b>البطاقة ١</b><span dir="ltr">٧١٣</span><small>قطرة ٧، شمس ١، ورقة ٣</small></div>
-      <div><b>البطاقة ٢</b><span dir="ltr">٩٢</span><small>■ تسعة، لأن النمط يزيد اثنين كل مرة. ● اثنان، لأنه ينقص اثنين.</small></div>
-      <div><b>البطاقة ٣</b><span dir="ltr">٢٦١</span><small>● واحد، إذن ■ اثنان، والباقي من التسعة ستة، فهو ▲.</small></div>
-      <div><b>البطاقة ٤</b><span dir="ltr">٦٥٢</span><small>ندفة الثلج ٦، الحواس ٥، الرئتان ٢</small></div>
+      <div><b>البطاقة ١: الكواكب</b><span dir="ltr">٤٦٣</span><small>المريخ رابع كوكب، وزحل سادس كوكب، والأرض ثالث كوكب.</small></div>
+      <div><b>البطاقة ٢: النبات</b><span dir="ltr">٣١٥٨</span><small>بذرة (٣)، ثم يخرج الجذر (١)، ثم نبتة بورقتين (٥)، ثم زهرة (٨).</small></div>
+      <div><b>البطاقة ٣: جسمي</b><span dir="ltr">٢٤٦</span><small>رئتان، وفي القلب أربع حجرات، ومجموعهما ستة.</small></div>
+      <div><b>البطاقة ٤: الماء</b><span dir="ltr">٤٢١</span><small>بعد السحابة المطر (٤)، وقبلها التبخّر (٢)، وتبدأ الرحلة من البحر (١).</small></div>
     </div>
-    <p class="why">لماذا للبطاقة ٣ جواب واحد؟ لو كان ● اثنين لكان ■ أربعة، ولبقي لـ▲ ثلاثة، وهي أصغر من أربعة. ولو كان ● ثلاثة لكان ■ ستة، ولم يبقَ لـ▲ إلا الصفر، وهو غير مسموح.</p>
+
   </div>
 </section>'''
 
@@ -117,7 +160,16 @@ h1, h2, h3 { font-family: "Lalezar", "Readex Pro", sans-serif; font-weight: 400;
 .cbs { direction: ltr; display: flex; gap: 2mm; }
 .cb { display: flex; flex-direction: column; align-items: center; gap: .5mm; }
 .cb span { height: 7mm; display: grid; place-items: center; color: var(--c); font-size: 14pt; }
-.cb i { width: 12mm; height: 13mm; border: .6mm solid var(--c); border-radius: 2mm; background: #fff; }
+.cb i { width: 11mm; height: 12mm; border: .6mm solid var(--c); border-radius: 2mm; background: #fff; }
+.strip { display: flex; align-items: flex-end; gap: 1mm; justify-content: space-between; background: #11142c; border-radius: 2.5mm; padding: 2mm 2.5mm; }
+.pl { display: flex; flex-direction: column; align-items: center; gap: .6mm; }
+.pl small { font-size: 6.5pt; color: #e8e4f4; }
+.stages { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2mm; }
+.stage { border: .4mm solid #e2dfe8; border-radius: 2.5mm; overflow: hidden; display: flex; flex-direction: column; align-items: center; background: #eef6ff; }
+.stage svg { width: 100%; display: block; }
+.stage b { font-size: 16pt; padding: .5mm 0; }
+.small { font-size: 9.5pt !important; color: #6a6474; }
+.cycle { width: 100%; max-height: 32mm; display: block; }
 .teacher { padding: 14mm; display: flex; flex-direction: column; gap: 5mm; }
 .teacher h1 { font-size: 34pt; color: #4a3346; line-height: 1; }
 .lead { color: #6a6474; font-size: 12pt; }
