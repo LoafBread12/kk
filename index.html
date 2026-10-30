@@ -337,15 +337,17 @@ button,input{font:inherit;color:inherit}
 .st-row input{flex:1;min-width:0;height:44px;padding:0 12px;border-radius:6px;border:2px solid var(--wood-900);background:var(--parch);color:var(--ink-dark);
   font-size:20px;font-weight:800;letter-spacing:2px;text-align:center;box-shadow:inset 0 2px 4px rgba(0,0,0,.25)}
 .st-row input.text{font-size:17px;letter-spacing:0;text-align:start}
-.st-locks{display:none;margin:0 10px 8px;gap:6px}
-.st-locks.on{display:flex}
-.lk{flex:1;min-width:0;display:grid;justify-items:center;gap:2px;padding:6px 2px 5px;border-radius:8px;background:rgba(58,36,20,.12);border:2px solid transparent;
+.st-letters{display:none;margin:0 10px 8px;gap:6px}
+.st-letters.on{display:flex}
+.lt{flex:1;min-width:0;display:grid;justify-items:center;gap:3px;padding:6px 2px 5px;border-radius:8px;background:rgba(58,36,20,.12);border:2px solid transparent;
   font-size:11px;font-weight:800;line-height:1.2;text-align:center;color:var(--ink-dark)}
-.lk svg{width:30px;height:35px;overflow:visible}
-.lk .shackle{transition:transform .5s cubic-bezier(.3,1.6,.5,1);transform-origin:70% 100%}
-.lk.open .shackle{transform:translateY(-6px) rotate(-28deg)}
-.lk.cur{border-color:var(--c);background:rgba(255,255,255,.4)}
-.lk.open{border-color:#5aa845;background:rgba(124,195,90,.25)}
+.lt .ltr{width:38px;height:44px;border-radius:9px;display:grid;place-items:center;font-family:var(--f-display);font-size:30px;line-height:1;
+  color:#7a5634;background:rgba(58,36,20,.2);box-shadow:inset 0 2px 4px rgba(0,0,0,.25)}
+.lt.open .ltr{color:#fff;background:var(--c);text-shadow:0 1px 2px rgba(0,0,0,.4);box-shadow:inset 0 -3px 0 rgba(0,0,0,.2);animation:letterIn .55s cubic-bezier(.3,1.6,.5,1)}
+@keyframes letterIn{from{transform:scale(.3) rotate(-18deg);opacity:0}}
+.lt.cur{border-color:var(--c);background:rgba(255,255,255,.4)}
+.lt.open{border-color:#5aa845;background:rgba(124,195,90,.25)}
+@media (prefers-reduced-motion:reduce){.lt.open .ltr{animation:none}}
 .st-row input.num{letter-spacing:6px}
 .st-step{color:var(--gold)}
 .st-row input::placeholder{color:#a88a62;letter-spacing:4px}
@@ -559,25 +561,31 @@ const CONFIG = {
         accept: ["أنفسكم", "انفسكم"],
         wrong: "ليست هذه الكلمة المخفية. ابحثوا جيدًا وحاولوا مرة أخرى." }
     ] },
-    // صندوق العجائب: أربعة أقفال، كل قفل يفتحه رقم سري من حلّ لغز بطاقته المطبوعة، وكل قفل يعطي ربع ماء المحطة.
+    // محطة صندوق العجائب: أربع بطاقات مطبوعة، وكل بطاقة يحلّها الفريق يكتب رقمها السري فيكشف حرفًا من كلمة مخفية («ثمار»).
+    // بعد الحروف الأربعة يرتّبها الفريق ويكتب الكلمة كاملة. الحروف تظهر بترتيب غير ترتيب الكلمة.
     // where: أين خبّأت البطاقة التالية (اتركها فارغة وسيقول الفريق «ابحثوا عن البطاقة …»).
     { id: "s3", name: "صندوق العجائب", icon: "chest", round: 1, location: "", steps: [
-      { lock: "قفل الكواكب", color: "#a98be6", numeric: true, water: 0.25, next: 2, where: "",
-        label: "حلّوا لغز البطاقة ١ وأدخلوا الرقم السري", button: "افتح القفل", accept: ["514"],
-        success: "فُتح قفل الكواكب! هل تعلمون؟ المشتري أكبر الكواكب، وهو أثقل من الكواكب الأخرى كلها مجتمعة.",
+      { part: "الكواكب", letter: "ر", color: "#a98be6", numeric: true, water: 0.15, next: 2, where: "",
+        label: "حلّوا لغز البطاقة ١ وأدخلوا الرقم السري", button: "اكشفوا الحرف", accept: ["514"],
+        success: "كشفتم الحرف «ر»! هل تعلمون؟ المشتري أكبر الكواكب، وهو أثقل من الكواكب الأخرى كلها مجتمعة.",
         wrong: "ليس هذا الرقم. فكّروا في البطاقة ١ مرة أخرى." },
-      { lock: "قفل الأزهار", color: "#5bb36a", numeric: true, water: 0.25, next: 3, where: "",
-        label: "اكتشفوا سرّ بتلات الأزهار في البطاقة ٢، واكتبوا العدد الناقص", button: "افتح القفل", accept: ["13"],
-        success: "فُتح قفل الأزهار! في كثير من الأزهار يكون عدد البتلات ٣ أو ٥ أو ٨ أو ١٣، وكل عدد منها مجموع العددين اللذين قبله.",
+      { part: "الأزهار", letter: "ا", color: "#5bb36a", numeric: true, water: 0.15, next: 3, where: "",
+        label: "اكتشفوا سرّ بتلات الأزهار في البطاقة ٢، واكتبوا العدد الناقص", button: "اكشفوا الحرف", accept: ["13"],
+        success: "كشفتم الحرف «ا»! في كثير من الأزهار يكون عدد البتلات ٣ أو ٥ أو ٨ أو ١٣، وكل عدد منها مجموع العددين اللذين قبله.",
         wrong: "ليس هذا الرقم. فكّروا في البطاقة ٢ مرة أخرى." },
-      { lock: "قفل الحواس", color: "#f0a23a", numeric: true, water: 0.25, next: 4, where: "",
-        label: "اعرفوا العضو الذي تستعملونه في كل موقف في البطاقة ٣", button: "افتح القفل", accept: ["352"],
-        success: "فُتح قفل الحواس! حواسّكم تعمل معًا: الطعام يبدو ألذّ حين تشمّون رائحته.",
+      { part: "الحواس", letter: "ث", color: "#f0a23a", numeric: true, water: 0.15, next: 4, where: "",
+        label: "اعرفوا العضو الذي تستعملونه في كل موقف في البطاقة ٣", button: "اكشفوا الحرف", accept: ["352"],
+        success: "كشفتم الحرف «ث»! حواسّكم تعمل معًا: الطعام يبدو ألذّ حين تشمّون رائحته.",
         wrong: "ليس هذا الرقم. فكّروا في البطاقة ٣ مرة أخرى." },
-      { lock: "قفل الماء", color: "#4fa3e0", numeric: true, water: 0.25,
-        label: "ماذا يحدث للماء في كل موقف في البطاقة ٤؟", button: "افتح القفل", accept: ["312"],
-        success: "فُتح قفل الماء، وفُتح صندوق العجائب! الماء من الأشياء القليلة التي نراها صلبةً وسائلةً وبخارًا. أنتم مكتشفو العجائب!",
-        wrong: "ليس هذا الرقم. فكّروا في البطاقة ٤ مرة أخرى." }
+      { part: "الماء", letter: "م", color: "#4fa3e0", numeric: true, water: 0.15,
+        label: "ماذا يحدث للماء في كل موقف في البطاقة ٤؟", button: "اكشفوا الحرف", accept: ["312"],
+        success: "كشفتم الحرف «م»! الماء من الأشياء القليلة التي نراها صلبةً وسائلةً وبخارًا. والآن رتّبوا الحروف الأربعة واكتبوا الكلمة المخفية.",
+        wrong: "ليس هذا الرقم. فكّروا في البطاقة ٤ مرة أخرى." },
+      { word: true, water: 0.4,
+        label: "رتّبوا الحروف الأربعة التي كشفتموها، واكتبوا الكلمة المخفية", button: "أرسلوا الكلمة", placeholder: "الكلمة المخفية",
+        accept: ["ثمار", "الثمار"],
+        success: "أحسنتم! الكلمة المخفية هي «ثمار»، وفُتح صندوق العجائب. أنتم مكتشفو العجائب!",
+        wrong: "ليست هذه الكلمة. رتّبوا الحروف الأربعة وفكّروا مرة أخرى." }
     ] },
     { id: "s4", name: "محطة النجمة", icon: "star",     code: "404", round: 1, location: "" },
     // الجولة الثانية: يكتب المعلّم «فوز» أو «خسر» في خانة المحطة
@@ -854,7 +862,7 @@ CONFIG.stations.forEach((st, i) => {
       <span class="st-chev">${CHEV}</span>
     </button>
     <div class="st-drop" id="drop-${st.id}"><div class="st-drop-in">
-      <div class="st-locks"></div>
+      <div class="st-letters"></div>
       <form class="st-form" novalidate>
         <label for="code-${st.id}"><span class="st-step"></span><span class="st-label"></span></label>
         <div class="st-row">
@@ -869,15 +877,15 @@ CONFIG.stations.forEach((st, i) => {
   li.querySelector(".st-name").textContent = st.name;
   if (st.location) { li.querySelector(".st-where").hidden = false; li.querySelector(".st-where span").textContent = st.location; }
   list.appendChild(li);
-  // a station whose steps are padlocks (صندوق العجائب) shows the padlocks, which open one by one
-  const lockSteps = stepsOf(st), locksEl = li.querySelector(".st-locks");
-  if (lockSteps.length > 1 && lockSteps.every(x => x.lock && x.color)) {
+  // a station whose steps reveal letters (صندوق العجائب) shows a tile per card; each solved card reveals its letter
+  const cardSteps = stepsOf(st).filter(x => x.letter), locksEl = li.querySelector(".st-letters");
+  if (cardSteps.length > 1) {
     locksEl.classList.add("on");
-    lockSteps.forEach(x => {
+    cardSteps.forEach(x => {
       const lk = document.createElement("span");
-      lk.className = "lk"; lk.style.setProperty("--c", x.color);
-      lk.innerHTML = `<svg viewBox="0 0 54 62" aria-hidden="true"><path class="shackle" d="M15 26V17a12 12 0 0 1 24 0v9" fill="none" stroke="#8d93ad" stroke-width="6" stroke-linecap="round"/><rect x="6" y="24" width="42" height="34" rx="8" fill="${x.color}"/><circle cx="27" cy="38" r="4" fill="#fff" opacity=".9"/><rect x="25" y="40" width="4" height="10" rx="2" fill="#fff" opacity=".9"/></svg><span></span>`;
-      lk.lastElementChild.textContent = x.lock;
+      lk.className = "lt"; lk.style.setProperty("--c", x.color); lk.dataset.letter = x.letter;
+      lk.innerHTML = '<b class="ltr">؟</b><span></span>';
+      lk.lastElementChild.textContent = x.part;
       locksEl.append(lk);
     });
   }
@@ -959,7 +967,7 @@ canEl.addEventListener("animationend", e => { if (e.animationName === "fill") ca
 function renderStations() {
   const n = state.unlocked.length;
   list.querySelectorAll(".station").forEach(li => {
-    const st = CONFIG.stations.find(x => x.id === li.dataset.id), steps = stepsOf(st), k = stepsDone(st);
+    const st = CONFIG.stations.find(x => x.id === li.dataset.id), steps = stepsOf(st), k = stepsDone(st), nCards = steps.filter(x => x.letter).length;
     const a = assignment(), mine = !!a && a.when === "now" && a.st.id === st.id, other = !!a && a.when === "now" && !mine;
     const noGroup = rotationOn() && !state.group;
     const done = k >= steps.length, multi = steps.length > 1, wait = !done && roundLocked(st), closed = !done && !wait && (!canAnswer() || other || noGroup);
@@ -973,8 +981,8 @@ function renderStations() {
       : closed ? (noGroup && canAnswer() ? "ننتظر رقم مجموعتكم من المعلّم، لحظات…" : other && canAnswer() ? `هذه ليست محطتكم في هذا الشوط. محطتكم الآن: ${a.st.name}، ${whereOf(a.st)}.` : closedMsg()) : "";
     li.querySelector(".st-status").innerHTML = done ? CHECK + "فُتح الماء"
       : wait ? LOCK + `تُفتح في الجولة ${toAr(st.round)}`
-      : k > 0 ? LOCK + (steps[0].lock ? `فُتح ${toAr(k)} من ${toAr(steps.length)} أقفال` : `أُنجزت ${toAr(k)} من ${toAr(steps.length)}، بقيت خطوة`)
-      : LOCK + (steps[0].results ? "بانتظار رمز المعلّم" : steps[0].lock ? "مقفلة، فيها " + toAr(steps.length) + " أقفال" : multi ? "مقفلة، فيها " + toAr(steps.length) + " خطوات" : "مقفلة، تحتاج كلمة السر");
+      : k > 0 ? LOCK + (steps[0].letter ? (k >= nCards ? "كشفتم الحروف الأربعة، اكتبوا الكلمة" : `كشفتم ${toAr(k)} من ${toAr(nCards)} حروف`) : `أُنجزت ${toAr(k)} من ${toAr(steps.length)}، بقيت خطوة`)
+      : LOCK + (steps[0].results ? "بانتظار رمز المعلّم" : steps[0].letter ? "مقفلة، فيها " + toAr(nCards) + " بطاقات وكلمة مخفية" : multi ? "مقفلة، فيها " + toAr(steps.length) + " خطوات" : "مقفلة، تحتاج كلمة السر");
     const step = steps[Math.min(k, steps.length - 1)];
     li.querySelector(".st-step").textContent = multi && !done ? `الخطوة ${toAr(k + 1)} من ${toAr(steps.length)}: ` : "";
     li.querySelector(".st-label").textContent = step.label;
@@ -984,8 +992,12 @@ function renderStations() {
     inp.classList.toggle("text", !codeLike);
     inp.classList.toggle("num", !!step.numeric);
     inp.inputMode = step.numeric ? "numeric" : "text";
-    [...li.querySelectorAll(".lk")].forEach((el, i) => { el.classList.toggle("open", i < k); el.classList.toggle("cur", i === k && !done); });
-    li.querySelector(".st-donemsg").textContent = steps[0].lock ? "فتحتم الأقفال الأربعة، وامتلأ الإبريق من ماء هذه المحطة." : multi ? "أنجزتم كل خطوات هذه المحطة، وامتلأ الإبريق من مائها." : "تم استخدام كلمة السر لهذه المحطة، وامتلأ الإبريق من مائها.";
+    [...li.querySelectorAll(".lt")].forEach((el, i) => {
+      const open = i < k;
+      el.classList.toggle("open", open); el.classList.toggle("cur", i === k && !done);
+      el.querySelector(".ltr").textContent = open ? el.dataset.letter : "؟";
+    });
+    li.querySelector(".st-donemsg").textContent = steps[0].letter ? "اكتشفتم الكلمة المخفية، وامتلأ الإبريق من ماء هذه المحطة." : multi ? "أنجزتم كل خطوات هذه المحطة، وامتلأ الإبريق من مائها." : "تم استخدام كلمة السر لهذه المحطة، وامتلأ الإبريق من مائها.";
   });
   const shown = CONFIG.stations.filter(onBoard), m = shown.filter(st => state.unlocked.includes(st.id)).length;
   list.querySelectorAll(".station").forEach(li => {
