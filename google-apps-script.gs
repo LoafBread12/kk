@@ -1,4 +1,4 @@
-// Google Apps Script for بستان البذرة.
+// Google Apps Script for معركة النمو.
 // Paste this into a Google Sheet (Extensions > Apps Script), then Deploy > New deployment > Web app,
 // "Execute as: Me", "Who has access: Anyone". Copy the /exec link into config.js (reportUrl).
 // After changing this code: Deploy > Manage deployments > edit (pencil) > Version: New version > Deploy.
