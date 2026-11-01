@@ -818,7 +818,7 @@ CONFIG.stations.forEach(() => pipsEl.appendChild(document.createElement("i")));
 // with rounds on, the board shows only the current round's stations (round 1 before the game starts)
 const maxRound = Math.max(1, ...CONFIG.stations.map(st => st.round || 1));
 const boardRound = () => Math.max(1, Math.min(round.n, maxRound));
-const onBoard = st => !CONFIG.reportUrl || !st.round || st.round === boardRound();
+const onBoard = st => !CONFIG.reportUrl || !st.round || st.round === boardRound() || forcedFor() === st;
 
 /* ---------- stations ---------- */
 const list = $("#stations");
@@ -840,7 +840,7 @@ function stepMatches(step, raw) {
 // a step with `results` takes one of several codes, each giving its own share of water (e.g. win / lose)
 const matchResult = (step, raw) => step.results ? step.results.find(r => stepMatches(r, raw)) || null : (stepMatches(step, raw) ? step : null);
 // stations tied to a round stay closed until the teacher starts that round
-const roundLocked = st => !!(CONFIG.reportUrl && st.round && round.n < st.round);
+const roundLocked = st => !!(CONFIG.reportUrl && st.round && round.n < st.round && forcedFor() !== st);
 
 CONFIG.stations.forEach((st, i) => {
   const li = document.createElement("li");
@@ -1361,9 +1361,15 @@ function stationFor(group, r, p) {
   return list[(Math.floor((group - 1) / per) + (p - 1)) % list.length];
 }
 // the team's station now (during a shawt) or next (before the game, between shawts, between rounds)
+// test mode: the teacher can fix a station for a group by hand (it ignores the rotation and the round)
+const forcedFor = () => {
+  const id = round.forced && state.group ? round.forced[state.group] : "";
+  return id ? CONFIG.stations.find(x => x.id === id) || null : null;
+};
 function assignment() {
   if (!rotationOn() || !state.group) return null;
-  const s = round.status;
+  const s = round.status, fs = forcedFor();
+  if (fs) return s === "over" ? null : { st: fs, when: s === "running" ? "now" : "next" };
   let st = null, when = "next";
   if (s === "running") { st = stationFor(state.group, round.n, round.part); when = "now"; }
   else if (s === "break") st = stationFor(state.group, round.n, round.part + 1);
@@ -1551,11 +1557,15 @@ async function pollRound() {
     if (round.lesson) toast("وقت الدرس", "استمعوا إلى المعلّم، والمهام الإضافية مفتوحة", 3400);
     else toast("انتهى الدرس", canWater() ? "عودوا إلى السقي والمحطات!" : "انتظروا المعلّم", 3000);
   }
+  const wasForced = JSON.stringify(round.forced || {});
+  round.forced = s.forced && typeof s.forced === "object" ? s.forced : {};
+  const forcedChanged = JSON.stringify(round.forced) !== wasForced;
   round.status = s.status; round.n = Number(s.round) || 0;
   round.part = Number(s.part) || 0; round.parts = Number(s.parts) || 4; round.partMin = Number(s.partMinutes) || 15;
   if (s.now) round.skew = new Date(s.now).getTime() - Date.now();
   round.endsAt = s.endsAt ? new Date(s.endsAt).getTime() - round.skew : 0;
   round.frozenLeft = round.prayer && round.endsAt ? Math.max(0, round.endsAt - Date.now()) : 0;
+  if (forcedChanged) renderStations();
   if (round.n !== wasN) {
     const before = Math.max(1, Math.min(wasN, maxRound));
     renderStations();

@@ -207,6 +207,15 @@ h1{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(28px,5v
       </div>
       <p class="fix-note">يبدأ الشوط المختار من جديد بوقته الكامل. لا يتغيّر تقدّم الفرق ولا ماؤها ولا طول نباتاتها.</p>
     </details>
+    <details class="fix" id="force">
+      <summary>للتجربة: إعطاء مجموعة محطة معيّنة</summary>
+      <div class="fix-row">
+        <label for="forceGroup">المجموعة</label><select id="forceGroup"></select>
+        <label for="forceStation">المحطة</label><select id="forceStation"></select>
+        <button class="btn go" type="button" id="btnForce">أعطِ المحطة</button>
+      </div>
+      <p class="fix-note" id="forceNote">تظهر المحطة لتلك المجموعة وتُفتح لها في أي جولة، وتتجاهل الدوران. اختر «حسب الدوران» لإرجاعها.</p>
+    </details>
     <p class="ctrl-msg" id="ctrlMsg" hidden role="status"></p>
     <form class="pin" id="pinForm" hidden>
       <label for="pinInput">رمز المعلّم</label>
@@ -454,6 +463,7 @@ async function control(action, extra) {
       ctrlMsg("لم يُنفَّذ الأمر (" + j.error + "). حاول مرة أخرى.", "err");
     } else if (j.state) {
       $("#pinForm").hidden = true; $("#pinMsg").textContent = "";
+      if (action === "force") ctrlMsg(extra.station ? "تم: أُعطيت المحطة للمجموعة." : "تم: عادت المجموعة إلى الدوران.", "ok");
       if (action === "goto" && extra) ctrlMsg(`تم: بدأ الشوط ${toAr(j.state.part)} من الجولة ${toAr(j.state.round)} من جديد.`, "ok");
     }
   } catch (e) {
@@ -461,6 +471,7 @@ async function control(action, extra) {
   }
   document.querySelectorAll(".controls .btn").forEach(b => b.disabled = false);
   await load();
+  if ($("#force").open) fillForce();
   if (action === "over" && game.status === "over" && view !== "replay") showView("replay");
 }
 $("#pinForm").addEventListener("submit", e => {
@@ -511,6 +522,18 @@ function fillFix() {
 $("#fixRound").addEventListener("change", () => { $("#fixPart").textContent = ""; fillFix(); });
 $("#fix").addEventListener("toggle", () => { if ($("#fix").open) { $("#fixRound").textContent = ""; $("#fixPart").textContent = ""; fillFix(); } });
 twoTap($("#btnGoto"), "انتقل وابدأ هذا الشوط", "اضغط مرة أخرى للتأكيد", "goto", () => ({ round: Number($("#fixRound").value), part: Number($("#fixPart").value) }));
+function fillForce() {
+  const gSel = $("#forceGroup"), sSel = $("#forceStation"), n = Number(CFG.groups) || 4;
+  if (!gSel.options.length) {
+    for (let g = 1; g <= n; g++) gSel.add(new Option("المجموعة " + toAr(g), g));
+    sSel.add(new Option("حسب الدوران (إلغاء)", ""));
+    (CFG.stations || []).forEach(st => sSel.add(new Option(st.name, st.id)));
+  }
+  const f = game.forced || {}, names = Object.keys(f).map(g => `المجموعة ${toAr(g)}: ${((CFG.stations || []).find(x => x.id === f[g]) || {}).name || f[g]}`);
+  $("#forceNote").textContent = (names.length ? "المحطات المثبّتة الآن: " + names.join("، ") + ". " : "لا توجد محطات مثبّتة. ") + "تُفتح المحطة لتلك المجموعة في أي جولة وتتجاهل الدوران، واختر «حسب الدوران» لإرجاعها.";
+}
+$("#force").addEventListener("toggle", fillForce);
+$("#btnForce").addEventListener("click", () => control("force", { group: Number($("#forceGroup").value), station: $("#forceStation").value }));
 $("#btnLesson").addEventListener("click", () => control("lesson", { on: !game.lesson }));
 $("#btnPrayer").addEventListener("click", () => control("prayer", { on: !game.prayer }));
 

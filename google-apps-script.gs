@@ -78,8 +78,12 @@ function state_() {
     prayer: prayer,                                // prayer time: everything closed, the part's clock held
     endsAt: endsAt ? new Date(endsAt).toISOString() : "",
     now: new Date().toISOString(),
-    gameId: gameId
+    gameId: gameId,
+    forced: forced_()                              // test mode: {group: stationId} the teacher fixed by hand
   };
+}
+function forced_() {
+  try { return JSON.parse(PropertiesService.getScriptProperties().getProperty("forced") || "{}") || {}; } catch (e) { return {}; }
 }
 // write down a part that ran out on its own: its status and its end time in the rounds sheet
 function settle_() {
@@ -223,13 +227,19 @@ function control_(d) {
     }
   } else if (d.action === "lesson") {             // the teacher's lesson button: on or off
     setState_({ lesson: d.on ? "1" : "0" });
+  } else if (d.action === "force") {              // for testing: put a group at a chosen station (empty station = back to the rotation)
+    const g = Math.max(1, Math.min(99, Number(d.group) || 0)), sid = String(d.station || "");
+    if (!g || (sid && !/^s\d{1,2}$/.test(sid))) return out_({ error: "bad_force" });
+    const f = forced_();
+    if (sid) f[g] = sid; else delete f[g];
+    setState_({ forced: JSON.stringify(f) });
   } else if (d.action === "give") {
     return give_(d);
   } else if (d.action === "adjust") {
     return adjust_(d, st);
   } else if (d.action === "new") {
     clear_("progress"); clear_("log"); clear_("rounds"); clear_("items");
-    setState_({ status: "idle", round: 0, part: 0, endsAt: 0, lesson: "0", prayer: "0", gameId: "g" + Date.now().toString(36) });
+    setState_({ status: "idle", round: 0, part: 0, endsAt: 0, lesson: "0", prayer: "0", forced: "{}", gameId: "g" + Date.now().toString(36) });
   } else {
     return out_({ error: "bad_action" });
   }
