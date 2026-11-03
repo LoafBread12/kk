@@ -95,6 +95,7 @@ h1{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(28px,5v
 .t-acts{display:flex;gap:6px;margin-top:2px}
 .t-acts button{flex:1;border:0;border-radius:6px;padding:6px 8px;font-weight:800;font-size:14px;cursor:pointer}
 .t-up{color:#0f2d0c;background:linear-gradient(180deg,#c9f0b0,var(--leaf) 60%,#4c9a35);box-shadow:inset 0 -2px 0 rgba(0,0,0,.2)}
+.t-kick{color:#fff;background:linear-gradient(180deg,#6b5a5a,#463838 60%,#2e2424);box-shadow:inset 0 -2px 0 rgba(0,0,0,.2)}.t-kick.arm{background:linear-gradient(180deg,#e9735f,#c0392b 60%,#8e2a1f)}
 .t-down{color:#fff;background:linear-gradient(180deg,#e9735f,#c0392b 60%,#8e2a1f);box-shadow:inset 0 -2px 0 rgba(0,0,0,.2)}
 .t-acts button:disabled{opacity:.5;cursor:wait}
 .t-acts button:active:not(:disabled){transform:translateY(1px)}
@@ -320,6 +321,7 @@ function ago(iso) {
   return "قبل " + toAr(Math.floor(s / 3600)) + " س";
 }
 
+let armKick = { id: "", until: 0 };
 function renderCards(rows) {
   const grid = $("#viewCards"); grid.textContent = "";
   rows.forEach((r, i) => {
@@ -347,7 +349,15 @@ function renderCards(rows) {
       up.type = down.type = "button";
       up.addEventListener("click", () => { up.disabled = true; control("give", { id: r.id, delta: AMT, kind: KIND }); });
       down.addEventListener("click", () => adjust(r, -AMT, down));
-      acts.append(up, down);
+      const kick = el("button", "t-kick" + (armKick.id === r.id && Date.now() < armKick.until ? " arm" : ""), armKick.id === r.id && Date.now() < armKick.until ? "اضغط مرة أخرى للطرد" : "طرد الفريق");
+      kick.type = "button";
+      kick.addEventListener("click", () => {
+        if (armKick.id === r.id && Date.now() < armKick.until) { armKick = { id: "", until: 0 }; kick.disabled = true; control("kick", { id: r.id }); return; }
+        armKick = { id: r.id, until: Date.now() + 3500 };
+        renderCards(lastRows);
+        setTimeout(() => { if (armKick.id === r.id) { armKick = { id: "", until: 0 }; renderCards(lastRows); } }, 3600);
+      });
+      acts.append(up, down, kick);
       card.append(acts);
     }
     grid.append(card);
@@ -463,6 +473,7 @@ async function control(action, extra) {
       ctrlMsg("لم يُنفَّذ الأمر (" + j.error + "). حاول مرة أخرى.", "err");
     } else if (j.state) {
       $("#pinForm").hidden = true; $("#pinMsg").textContent = "";
+      if (action === "kick") ctrlMsg("تم طرد الفريق من اللعبة.", "ok");
       if (action === "force") ctrlMsg(extra.station ? "تم: أُعطيت المحطة للمجموعة." : "تم: عادت المجموعة إلى الدوران.", "ok");
       if (action === "goto" && extra) ctrlMsg(`تم: بدأ الشوط ${toAr(j.state.part)} من الجولة ${toAr(j.state.round)} من جديد.`, "ok");
     }
