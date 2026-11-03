@@ -82,6 +82,23 @@ function state_() {
     forced: forced_()                              // test mode: {group: stationId} the teacher fixed by hand
   };
 }
+// devices the teacher kicked out: they cannot report or play until a new game starts
+function kicked_() {
+  try { const k = JSON.parse(PropertiesService.getScriptProperties().getProperty("kicked") || "[]"); return Array.isArray(k) ? k : []; } catch (e) { return []; }
+}
+function kick_(d) {
+  const id = clean_(d.id, 40);
+  if (!id) return out_({ error: "bad_team" });
+  const k = kicked_();
+  if (k.indexOf(id) < 0) k.push(id);
+  setState_({ kicked: JSON.stringify(k.slice(-300)) });
+  const sh = sheet_("progress"), body = body_("progress");
+  const i = body.findIndex(r => String(r[0]) === id);
+  if (i >= 0) sh.deleteRow(i + 2);
+  const items = sheet_("items"), ib = body_("items");
+  for (let j = ib.length - 1; j >= 0; j--) if (String(ib[j][1]) === id) items.deleteRow(j + 2);
+  return out_({ ok: true, state: state_() });
+}
 function forced_() {
   try { return JSON.parse(PropertiesService.getScriptProperties().getProperty("forced") || "{}") || {}; } catch (e) { return {}; }
 }
@@ -123,6 +140,7 @@ function out_(obj) {
 function report_(d) {
   const id = clean_(d.id, 40);
   if (!id) return out_({ error: "missing_id" });
+  if (kicked_().indexOf(id) >= 0) return out_({ kicked: true });
   const st = state_();
   if (d.gameId && d.gameId !== st.gameId) return out_({ ignored: true, state: st });
   const now = new Date();
@@ -233,13 +251,15 @@ function control_(d) {
     const f = forced_();
     if (sid) f[g] = sid; else delete f[g];
     setState_({ forced: JSON.stringify(f) });
+  } else if (d.action === "kick") {               // kick a team out of the game
+    return kick_(d);
   } else if (d.action === "give") {
     return give_(d);
   } else if (d.action === "adjust") {
     return adjust_(d, st);
   } else if (d.action === "new") {
     clear_("progress"); clear_("log"); clear_("rounds"); clear_("items");
-    setState_({ status: "idle", round: 0, part: 0, endsAt: 0, lesson: "0", prayer: "0", forced: "{}", gameId: "g" + Date.now().toString(36) });
+    setState_({ status: "idle", round: 0, part: 0, endsAt: 0, lesson: "0", prayer: "0", forced: "{}", kicked: "[]", gameId: "g" + Date.now().toString(36) });
   } else {
     return out_({ error: "bad_action" });
   }
@@ -268,6 +288,7 @@ function doGet(e) {
       const r = body_("progress").find(x => String(x[0]) === id);
       st.adj = r ? Number(r[8]) || 0 : 0;
       st.group = r ? Number(r[10]) || 0 : 0;
+      st.kicked = kicked_().indexOf(String(id)) >= 0;
       st.items = pendingItems_(id).map(x => ({ key: x.key, kind: x.kind, amount: x.amount }));
     }
     return out_(st);
@@ -278,7 +299,8 @@ function doGet(e) {
       round: Number(r[0]), part: Number(r[3]) || 1, start: iso_(r[1]),
       end: r[2] ? iso_(r[2]) : r[4] instanceof Date && r[4].getTime() < Date.now() ? iso_(r[4]) : ""
     }));
-    const log = body_("log").map(r => ({
+    const gone = kicked_();
+    const log = body_("log").filter(r => gone.indexOf(String(r[2])) < 0).map(r => ({
       t: iso_(r[0]), round: Number(r[1]) || 0, id: String(r[2]), team: plain_(r[3]),
       stage: Number(r[4]) || 1, stations: Number(r[5]) || 0, done: r[6] === "نعم", height: Number(r[7]) || 0
     }));

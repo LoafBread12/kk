@@ -274,6 +274,11 @@ button,input{font:inherit;color:inherit}
   padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
   background:radial-gradient(ellipse at 50% 30%,rgba(28,88,72,.96),rgba(8,32,28,.98) 70%);animation:prayIn .5s ease}
 @keyframes prayIn{from{opacity:0}}
+.kicked{position:fixed;inset:0;z-index:70;display:grid;place-items:center;padding:20px;background:radial-gradient(ellipse at 50% 30%,rgba(90,34,28,.97),rgba(30,10,8,.99) 70%);animation:prayIn .4s ease}
+.kicked-card{width:min(100%,440px);display:grid;justify-items:center;gap:12px;text-align:center;color:#fbe9e4}
+.kicked-card svg{width:110px;height:110px}
+.kicked-card h2{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(32px,7vw,46px);line-height:1.2;color:#ffd0c6}
+.kicked-card p{margin:0;font-size:18px;font-weight:600;line-height:1.6}
 .prayer-card{width:min(100%,460px);display:grid;justify-items:center;gap:10px;text-align:center;color:var(--ink)}
 .prayer-card svg{width:150px;height:auto;filter:drop-shadow(0 0 24px rgba(244,195,79,.35))}
 .prayer-card h2{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(34px,7vw,52px);line-height:1.15;color:var(--gold)}
@@ -521,6 +526,14 @@ button,input{font:inherit;color:inherit}
     </section>
     <div class="b-foot"><button class="reset" id="reset" type="button">بدء من جديد</button></div>
   </aside>
+</div>
+
+<div class="kicked" id="kicked" hidden role="alertdialog" aria-labelledby="kickedTitle">
+  <div class="kicked-card">
+    <svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="40" fill="none" stroke="#ff9d8d" stroke-width="8"/><path d="M26 26L74 74" stroke="#ff9d8d" stroke-width="8" stroke-linecap="round"/></svg>
+    <h2 id="kickedTitle">تم إخراجكم من اللعبة</h2>
+    <p>أخرجكم المعلّم من هذه اللعبة. اذهبوا إلى المعلّم ليشرح لكم.</p>
+  </div>
 </div>
 
 <div class="prayer" id="prayer" hidden role="alertdialog" aria-labelledby="prayerTitle">
@@ -1536,6 +1549,9 @@ async function pollRound() {
   } else if (s.gameId && !state.gameId) {
     state.gameId = s.gameId; save(true);
   }
+  // the teacher kicked this device out: one screen over everything, and no more reports
+  kickedOut = s.kicked === true;
+  $("#kicked").hidden = !kickedOut;
   if (Array.isArray(s.items)) syncItems(s.items);
   if (typeof s.group === "number" && s.group && s.group !== state.group && state.team) {
     state.group = s.group; save(true);
@@ -1711,8 +1727,9 @@ function cutFx(d) {
 }
 
 let lastReport = 0;
+let kickedOut = false;
 function report() {
-  if (!CONFIG.reportUrl || !state.team) return;
+  if (!CONFIG.reportUrl || !state.team || kickedOut) return;
   lastReport = performance.now();
   const st = stageOfH(heightCm());
   const body = JSON.stringify({
