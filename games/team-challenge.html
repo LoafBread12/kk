@@ -1,0 +1,408 @@
+<title>تحدّي الفريقين</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Readex+Pro:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  /* Layout: made for a classroom screen — the two teams face each other across the rope at the top, the question card fills the middle. */
+  :root {
+    --night: #121528;
+    --panel: #1c2040;
+    --line: #2f3566;
+    --ink: #f6efe0;
+    --muted: #b3aecb;
+    --a: #f0a23a;      /* team A: sun */
+    --b: #4fa3e0;      /* team B: drop */
+    --rope: #c9a46a;
+    --ok: #7fd6a2;
+    --bad: #ff8a7a;
+    --gold: #f4c04e;
+    --display: "Lalezar", "Readex Pro", system-ui, sans-serif;
+    --body: "Readex Pro", system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  html, body { height: 100%; }
+  body { background: radial-gradient(ellipse at 50% -20%, #262c5c 0%, var(--night) 60%) fixed, var(--night); color: var(--ink); font-family: var(--body); direction: rtl;
+         padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 16px 28px; }
+  .wrap { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+  h1 { font-family: var(--display); font-weight: 400; font-size: clamp(36px, 8vw, 58px); line-height: 1; margin: 0; text-align: center; color: var(--gold); }
+  .sub { text-align: center; color: var(--muted); margin: 4px 0 0; }
+  button { font-family: var(--body); }
+  button:focus-visible, input:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+
+  /* teams + rope */
+  .arena { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 3fr) minmax(0, 1fr); align-items: center; gap: 10px; }
+  .team { text-align: center; border-radius: 18px; padding: 10px 6px; background: var(--panel); border: 3px solid transparent; transition: border-color .3s, transform .3s; }
+  .team.turn { border-color: var(--c); transform: scale(1.04); }
+  .team svg { width: 46px; height: 46px; }
+  .team b { display: block; font-family: var(--display); font-weight: 400; font-size: clamp(18px, 3.4vw, 26px); color: var(--c); line-height: 1.1; }
+  .team small { color: var(--muted); font-size: 13px; }
+  .rope { position: relative; height: 90px; }
+  .rope svg { width: 100%; height: 100%; overflow: visible; }
+  .knot { transition: transform .7s cubic-bezier(.3,1.5,.5,1); }
+  .tick { fill: #3a4177; }
+  .tick.mid { fill: var(--gold); }
+
+  /* question card */
+  .card { background: var(--panel); border: 2px solid var(--line); border-radius: 22px; padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+  .meta { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .chip { border-radius: 30px; padding: 4px 14px; font-weight: 600; font-size: 14px; background: #262b55; color: var(--gold); }
+  .who { font-weight: 600; font-size: 16px; }
+  .who span { color: var(--c); }
+  .q { font-size: clamp(22px, 4vw, 34px); font-weight: 600; line-height: 1.5; text-align: center; margin: 4px 0; text-wrap: balance; }
+  .opts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .opt { font-size: clamp(17px, 2.8vw, 24px); font-weight: 600; color: var(--ink); background: #262b55; border: 3px solid #343b72; border-radius: 16px; padding: 18px 10px; cursor: pointer; display: flex; gap: 10px; align-items: center; justify-content: center; text-align: center; }
+  .opt:hover:not([disabled]) { border-color: var(--gold); }
+  .opt i { font-style: normal; flex: none; width: 30px; height: 30px; border-radius: 50%; background: #343b72; display: grid; place-items: center; font-size: 15px; }
+  .opt.right { border-color: var(--ok); background: #1f4a3c; }
+  .opt.wrong { border-color: var(--bad); background: #4a2630; opacity: .75; }
+  .opt[disabled] { cursor: default; }
+  .note { min-height: 28px; text-align: center; font-size: 18px; }
+  .note.ok { color: var(--ok); } .note.bad { color: var(--bad); }
+  .actions { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+  .btn { font-size: 16px; font-weight: 600; color: var(--ink); background: #262b55; border: 2px solid var(--line); border-radius: 14px; padding: 10px 18px; cursor: pointer; }
+  .btn:hover { border-color: var(--gold); }
+  .btn.main { background: var(--gold); color: #1d1a2e; border-color: var(--gold); }
+  .btn.ta { border-color: var(--a); } .btn.tb { border-color: var(--b); }
+
+  /* movement challenge */
+  .move { border-color: var(--gold); background: linear-gradient(160deg, #2b2a4f, #1c2040); }
+  .move .q { color: var(--gold); }
+  .move p { margin: 0; text-align: center; font-size: 18px; line-height: 1.7; }
+
+  /* squares board */
+  .board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; width: min(100%, 480px); margin: 0 auto; }
+  .sqr { aspect-ratio: 1; border-radius: 18px; border: 3px solid #343b72; background: #262b55; color: var(--ink); cursor: pointer; display: grid; place-items: center; padding: 6px;
+         font-weight: 600; font-size: clamp(14px, 2.6vw, 19px); }
+  .sqr:hover:not([disabled]) { border-color: var(--gold); }
+  .sqr[disabled] { cursor: default; }
+  .sqr svg { width: 62%; height: 62%; }
+  .sqr.t0 { border-color: var(--a); background: #3b2c22; } .sqr.t1 { border-color: var(--b); background: #1f3350; }
+  .sqr.line { box-shadow: 0 0 0 4px var(--gold), 0 0 22px rgba(244,192,78,.5); }
+  .sqr small { color: var(--muted); font-size: 13px; }
+  /* setup */
+  .setup { display: grid; gap: 14px; }
+  .names { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .field { display: grid; gap: 4px; }
+  .field label { font-size: 14px; color: var(--muted); }
+  .field input { font: 18px var(--body); color: var(--ink); background: #0f1226; border: 2px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+  .cats { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .cats label { display: flex; gap: 6px; align-items: center; background: #262b55; border: 2px solid var(--line); border-radius: 30px; padding: 6px 14px; cursor: pointer; font-weight: 600; }
+  .cats input { accent-color: var(--gold); width: 18px; height: 18px; }
+  .seg { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+  .seg button { font-size: 15px; font-weight: 600; color: var(--ink); background: #262b55; border: 2px solid var(--line); border-radius: 12px; padding: 8px 14px; cursor: pointer; }
+  .seg button[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); }
+  .how { color: #d9d3ea; font-size: 15px; line-height: 1.8; margin: 0; padding-inline-start: 20px; list-style: arabic-indic; }
+
+  .win { text-align: center; }
+  .win h2 { font-family: var(--display); font-weight: 400; font-size: clamp(36px, 8vw, 64px); margin: 0; color: var(--c); }
+  .win p { font-size: 20px; margin: 6px 0 0; }
+
+  @media (max-width: 560px) {
+    .arena { grid-template-columns: 1fr 1fr; } .rope { grid-column: 1 / -1; grid-row: 2; height: 70px; }
+    .opts { grid-template-columns: 1fr; } .names { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) { .knot, .team { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>تحدّي الفريقين</h1>
+    <p class="sub">لعبتان لفريقين، بأسئلة عن عجائب الخلق: شدّ الحبل، واحتلال المربعات.</p>
+  </header>
+
+  <div class="arena" aria-live="polite">
+    <div class="team" id="teamA" style="--c: var(--a)">
+      <svg viewBox="0 0 46 46" aria-hidden="true"><circle cx="23" cy="23" r="10" fill="#f0a23a"/><g stroke="#f0a23a" stroke-width="3.5" stroke-linecap="round"><path d="M23 3v6M23 37v6M3 23h6M37 23h6M8.9 8.9l4.2 4.2M32.9 32.9l4.2 4.2M8.9 37.1l4.2-4.2M32.9 13.1l4.2-4.2"/></g></svg>
+      <b id="nameA">فريق الشمس</b><small id="scoreA"></small>
+    </div>
+    <div class="rope" aria-hidden="true">
+      <svg viewBox="0 0 600 90" preserveAspectRatio="none" id="ropeSvg"></svg>
+    </div>
+    <div class="team" id="teamB" style="--c: var(--b)">
+      <svg viewBox="0 0 46 46" aria-hidden="true"><path d="M23 4C16 14 11 21 11 28a12 12 0 0 0 24 0c0-7-5-14-12-24z" fill="#4fa3e0"/><path d="M17 29a6 6 0 0 0 6 6" stroke="#cfe8fb" stroke-width="3" fill="none" stroke-linecap="round"/></svg>
+      <b id="nameB">فريق القطرة</b><small id="scoreB"></small>
+    </div>
+  </div>
+
+  <main id="main"></main>
+</div>
+
+<script>
+(() => {
+  // Every question: text, three options (first one is the right answer; shuffled on show), category.
+  const BANK = {
+    "الكواكب": [
+      ["ما أكبر كوكب يدور حول الشمس؟", ["المشتري", "زحل", "الأرض"]],
+      ["ما أقرب كوكب إلى الشمس؟", ["عطارد", "المريخ", "الزهرة"]],
+      ["أيّ كوكب يُسمّى الكوكب الأحمر؟", ["المريخ", "عطارد", "نبتون"]],
+      ["أيّ كوكب حوله حلقات كبيرة جميلة؟", ["زحل", "الأرض", "المريخ"]],
+      ["كم كوكبًا يدور حول الشمس؟", ["ثمانية", "خمسة", "اثنا عشر"]],
+      ["لماذا نرى القمر مضيئًا في الليل؟", ["لأنه يعكس ضوء الشمس", "لأن فيه نارًا", "لأنه نجم صغير"]],
+      ["ما ترتيب الأرض بين الكواكب من الشمس؟", ["الثالث", "الأول", "الخامس"]],
+      ["ما الشمس؟", ["نجم", "كوكب", "قمر"]],
+    ],
+    "النبات": [
+      ["أيّ جزء من النبات يمتصّ الماء من التربة؟", ["الجذر", "الزهرة", "الثمرة"]],
+      ["أين يصنع النبات غذاءه؟", ["في الورقة", "في الجذر", "في البذرة"]],
+      ["ماذا يحتاج النبات ليصنع غذاءه؟", ["ضوء الشمس والماء والهواء", "التراب وحده", "الظلام والبرد"]],
+      ["ما أسرع النباتات نموًّا في العالم؟", ["الخيزران", "الصبّار", "النخلة"]],
+      ["أين يخزّن الصبّار الماء؟", ["في ساقه", "في زهرته", "في أشواكه"]],
+      ["ماذا يخرج من البذرة أولًا؟", ["الجذر", "الزهرة", "الثمرة"]],
+      ["لماذا أوراق النبات خضراء؟", ["فيها مادة اليخضور", "لأنها مطليّة", "لأنها مبلّلة"]],
+      ["أيّ شجرة لا يسقط ورقها، وشبّهها النبي ﷺ بالمسلم؟", ["النخلة", "التينة", "الزيتونة"]],
+    ],
+    "جسمي": [
+      ["كم حاسّة للإنسان؟", ["خمس", "ثلاث", "سبع"]],
+      ["ما أكبر عضو في جسم الإنسان؟", ["الجلد", "القلب", "الكبد"]],
+      ["أين توجد أصغر عظمة في الجسم؟", ["في الأذن", "في الإصبع", "في الأنف"]],
+      ["كم رئة في صدرك؟", ["اثنتان", "واحدة", "أربع"]],
+      ["أيّ عضو ينبض ليلًا ونهارًا ولا يستريح؟", ["القلب", "المعدة", "الرئة"]],
+      ["هل يوجد شخصان لهما البصمة نفسها؟", ["لا، أبدًا", "نعم، التوأمان", "نعم، الإخوة"]],
+      ["أين يبدأ هضم الطعام؟", ["في الفم", "في المعدة", "في الأمعاء"]],
+      ["كم عظمة في جسم الإنسان البالغ؟", ["٢٠٦", "٥٠", "١٠٠٠"]],
+    ],
+    "الماء والأرض": [
+      ["ماذا يصير الماء إذا تجمّد؟", ["ثلجًا", "بخارًا", "ترابًا"]],
+      ["لماذا يطفو الثلج فوق الماء؟", ["لأنه أخفّ من الماء", "لأنه ساخن", "لأنه ملوّن"]],
+      ["كم ضلعًا لندفة الثلج؟", ["ستة", "أربعة", "ثمانية"]],
+      ["كيف يصعد ماء البحر إلى السماء؟", ["يتبخّر", "يتجمّد", "يطير بالرياح قطرات"]],
+      ["من أيّ شيء جعل الله كل شيء حيّ؟", ["من الماء", "من النار", "من الهواء"]],
+      ["ماذا جعل الله الجبال للأرض؟", ["أوتادًا", "أبوابًا", "أنهارًا"]],
+      ["من أين يأتي المطر؟", ["من السحاب", "من البحر مباشرة", "من الجبال"]],
+      ["ماذا يحدث للماء إذا غلى مدة طويلة؟", ["يتبخّر وينقص", "يتجمّد", "يزيد"]],
+    ],
+    "مخلوقات في القرآن": [
+      ["أيّ حشرة يخرج من بطونها شراب فيه شفاء للناس؟", ["النحلة", "النملة", "الذبابة"]],
+      ["ما أوهن البيوت كما في القرآن؟", ["بيت العنكبوت", "بيت النمل", "عشّ الطائر"]],
+      ["أيّ حيوان أمرنا الله أن ننظر كيف خُلق؟", ["الإبل", "الحصان", "الأسد"]],
+      ["ماذا يخزّن الجمل في سنامه؟", ["الدهن", "الماء", "الهواء"]],
+      ["مع أيّ نبي كانت قصة النملة التي حذّرت قومها؟", ["سليمان عليه السلام", "موسى عليه السلام", "نوح عليه السلام"]],
+      ["أيّ طائر تفقّده سليمان عليه السلام فلم يجده؟", ["الهدهد", "الغراب", "الحمامة"]],
+    ],
+  };
+  const MOVES = [
+    ["قطرة الماء", "أول فريق يمثّل رحلة قطرة الماء بحركاته: بحر، ثم يتبخّر، ثم سحابة، ثم مطر."],
+    ["ندفة الثلج", "أول فريق يقف منه ستة أعضاء في دائرة، بعدد أضلاع ندفة الثلج."],
+    ["الكواكب", "أول فريق يكتب على السبورة أسماء أربعة كواكب كتابة صحيحة."],
+    ["البذرة", "أول فريق يمثّل نمو البذرة: يجلس صغيرًا، ثم يخرج الجذر، ثم يقف ويرفع يديه أوراقًا."],
+    ["الحواس", "أول فريق يذكر شيئًا لكل حاسّة من الحواس الخمس، دون أن يتكرّر شيء."],
+    ["الأخضر", "أول فريق يجمع من الصف ثلاثة أشياء خضراء ويضعها أمام المعلّم."],
+  ];
+  const AR = (n) => String(n).replace(/\d/g, (d) => "٠١٢٣٤٥٦٧٨٩"[d]);
+  const $ = (id) => document.getElementById(id);
+  const main = $("main");
+
+  let G = { mode: "rope", names: ["فريق الشمس", "فريق القطرة"], cats: Object.keys(BANK), steps: 5, pos: 0, turn: 0, deck: [], moves: [], count: 0, phase: "setup", stats: [0, 0] };
+  // pos: -steps (team A wins) ... +steps (team B wins). Team A sits on the right in RTL, so a pull toward A moves the knot right.
+
+  const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+
+  function drawRope() {
+    const svg = $("ropeSvg"), n = G.steps, w = 600, mid = w / 2, step = (w / 2 - 40) / n;
+    let ticks = "";
+    for (let k = -n; k <= n; k++) ticks += `<rect class="tick${k === 0 ? " mid" : ""}" x="${mid + k * step - (k === 0 ? 3 : 1.5)}" y="${k === 0 ? 58 : 64}" width="${k === 0 ? 6 : 3}" height="${k === 0 ? 24 : 14}" rx="1.5"/>`;
+    const x = -G.pos * step; // team A (pos < 0) pulls to the right
+    svg.innerHTML = `
+      <rect x="${mid + n * step}" y="60" width="4" height="22" fill="#f0a23a"/><rect x="${mid - n * step - 4}" y="60" width="4" height="22" fill="#4fa3e0"/>
+      ${ticks}
+      <g class="knot" style="transform: translateX(${x}px)">
+        <path d="M-40 40 Q150 30 300 40 T640 40" stroke="#8b6b3d" stroke-width="12" fill="none" stroke-linecap="round"/>
+        <path d="M-40 40 Q150 30 300 40 T640 40" stroke="#c9a46a" stroke-width="8" fill="none" stroke-dasharray="10 6" stroke-linecap="round"/>
+        <path d="M300 40v-30" stroke="#f6efe0" stroke-width="3"/><path d="M300 10l26 9-26 9z" fill="#f4c04e"/>
+        <circle cx="300" cy="40" r="9" fill="#f4c04e" stroke="#8b6b3d" stroke-width="3"/>
+      </g>`;
+    svg.setAttribute("viewBox", "0 0 600 90");
+    // RTL page: the right end of the rope is team A's side (first column)
+    $("teamA").classList.toggle("turn", G.phase === "play" && G.turn === 0);
+    $("teamB").classList.toggle("turn", G.phase === "play" && G.turn === 1);
+    $("nameA").textContent = G.names[0]; $("nameB").textContent = G.names[1];
+    $("scoreA").textContent = G.phase === "setup" ? "" : `أجوبة صحيحة: ${AR(G.stats[0])}`;
+    $("scoreB").textContent = G.phase === "setup" ? "" : `أجوبة صحيحة: ${AR(G.stats[1])}`;
+  }
+
+  function setup() {
+    G.phase = "setup"; drawRope();
+    main.innerHTML = `<section class="card setup">
+      <div class="names">
+        <div class="field"><label for="nA">اسم الفريق الأول (يمين)</label><input id="nA" value="${esc(G.names[0])}"></div>
+        <div class="field"><label for="nB">اسم الفريق الثاني (يسار)</label><input id="nB" value="${esc(G.names[1])}"></div>
+      </div>
+      <div class="cats" role="group" aria-label="مواضيع الأسئلة">
+        ${Object.keys(BANK).map((c) => `<label><input type="checkbox" value="${c}" ${G.cats.includes(c) ? "checked" : ""}>${c}</label>`).join("")}
+      </div>
+      <div class="seg" role="group" aria-label="اللعبة">
+        <button type="button" data-mode="rope" aria-pressed="${G.mode !== "grid"}">شدّ الحبل</button>
+        <button type="button" data-mode="grid" aria-pressed="${G.mode === "grid"}">احتلال المربعات</button>
+      </div>
+      <div class="seg" role="group" aria-label="طول الحبل" id="ropeLen" ${G.mode === "grid" ? "hidden" : ""}>
+        ${[[3, "جولة قصيرة"], [5, "جولة عادية"], [7, "جولة طويلة"]].map(([n, t]) => `<button type="button" data-steps="${n}" aria-pressed="${G.steps === n}">${t} (${AR(n)} خطوات)</button>`).join("")}
+      </div>
+      <ol class="how" id="howGrid" ${G.mode === "grid" ? "" : "hidden"}>
+        <li>في اللوحة تسعة مربعات، على كل مربع موضوع.</li>
+        <li>يختار الفريق الذي دوره مربعًا، ويجيب عن سؤاله. وإن أخطأ، فللفريق الآخر فرصة واحدة.</li>
+        <li>من أجاب صحيحًا أخذ المربع وظهرت عليه علامته: الشمس أو القطرة.</li>
+        <li>أول فريق يأخذ ثلاثة مربعات في خطّ واحد يفوز. فكّروا: أيّ مربع تختارون لتمنعوا الفريق الآخر؟</li>
+      </ol>
+      <ol class="how" id="howRope" ${G.mode === "grid" ? "hidden" : ""}>
+        <li>يجيب الفريقان بالدور. الفريق الذي دوره يختار جوابًا من ثلاثة.</li>
+        <li>الجواب الصحيح يشدّ الحبل خطوة نحو الفريق. وإن أخطأ، فللفريق الآخر فرصة واحدة.</li>
+        <li>بعد كل أربعة أسئلة يأتي <b>تحدّي حركة</b> يلعبه الفريقان معًا، والأسرع يشدّ الحبل.</li>
+        <li>أول فريق يشدّ الحبل إلى خطّه يفوز.</li>
+      </ol>
+      <div class="actions"><button class="btn main" id="go" type="button">ابدأ اللعب</button></div>
+    </section>`;
+    main.querySelectorAll("[data-steps]").forEach((b) => b.addEventListener("click", () => {
+      G.steps = +b.dataset.steps; main.querySelectorAll("[data-steps]").forEach((x) => x.setAttribute("aria-pressed", x === b)); drawRope();
+    }));
+    main.querySelectorAll("[data-mode]").forEach((b) => b.addEventListener("click", () => {
+      G.mode = b.dataset.mode; main.querySelectorAll("[data-mode]").forEach((x) => x.setAttribute("aria-pressed", x === b));
+      $("ropeLen").hidden = $("howRope").hidden = G.mode === "grid"; $("howGrid").hidden = G.mode !== "grid";
+      document.querySelector(".rope").style.visibility = G.mode === "grid" ? "hidden" : "visible";
+    }));
+    document.querySelector(".rope").style.visibility = G.mode === "grid" ? "hidden" : "visible";
+    $("go").addEventListener("click", start);
+  }
+
+  function start() {
+    G.names = [$("nA").value.trim() || "الفريق الأول", $("nB").value.trim() || "الفريق الثاني"];
+    G.cats = [...main.querySelectorAll(".cats input:checked")].map((i) => i.value);
+    if (!G.cats.length) G.cats = Object.keys(BANK);
+    begin();
+  }
+
+  const freshDeck = () => shuffle(G.cats.flatMap((c) => BANK[c].map((q) => ({ c, q: q[0], opts: q[1] }))));
+  function begin() {
+    G.deck = freshDeck(); G.moves = shuffle(MOVES.slice());
+    Object.assign(G, { pos: 0, turn: 0, count: 0, stats: [0, 0], phase: "play", justMoved: false, board: null });
+    if (G.mode === "grid") gridStart(); else next();
+  }
+
+  function next() {
+    if (Math.abs(G.pos) >= G.steps) return finish();
+    drawRope();
+    if (G.count > 0 && G.count % 4 === 0 && G.moves.length && !G.justMoved) { G.justMoved = true; return movement(); }
+    G.justMoved = false;
+    if (!G.deck.length) G.deck = freshDeck();
+    const item = G.deck.pop();
+    G.count++;
+    ask(item, (winner) => { if (winner !== null) { G.stats[winner]++; pull(winner); } }, next);
+  }
+
+  // Shows one question. The team whose turn it is answers; one wrong answer passes it to the other team.
+  // onResult(winner|null) runs once, then the "next" button calls onNext.
+  function ask(item, onResult, onNext, label) {
+    const right = item.opts[0], opts = shuffle(item.opts.slice());
+    let tries = 0, answering = G.turn;
+    main.innerHTML = `<section class="card">
+      <div class="meta"><span class="chip">${label || item.c}</span><span class="who" id="who"></span></div>
+      <p class="q">${item.q}</p>
+      <div class="opts">${opts.map((o, k) => `<button type="button" class="opt" data-o="${esc(o)}"><i>${AR(k + 1)}</i>${o}</button>`).join("")}</div>
+      <div class="note" id="note"></div>
+      <div class="actions" id="act" hidden><button class="btn main" id="nx" type="button">تابع</button></div>
+    </section>`;
+    const who = () => { $("who").innerHTML = `يجيب الآن: <span style="--c: var(--${answering ? "b" : "a"})">${esc(G.names[answering])}</span>`; };
+    who();
+    const buttons = [...main.querySelectorAll(".opt")];
+    const end = (winner, text, cls) => {
+      buttons.forEach((b) => { b.disabled = true; if (b.dataset.o === right) b.classList.add("right"); });
+      $("note").className = "note " + cls; $("note").textContent = text;
+      onResult(winner);
+      $("act").hidden = false; G.turn = 1 - G.turn; drawRope();
+      $("nx").focus();
+      $("nx").addEventListener("click", onNext);
+    };
+    buttons.forEach((b) => b.addEventListener("click", () => {
+      if (b.disabled) return;
+      if (b.dataset.o === right) end(answering, G.mode === "grid" ? `صحيح! المربع لـ${G.names[answering]}.` : `صحيح! ${G.names[answering]} يشدّ الحبل خطوة.`, "ok");
+      else {
+        b.classList.add("wrong"); b.disabled = true; tries++;
+        if (tries === 1) {
+          answering = 1 - answering; who();
+          $("note").className = "note bad"; $("note").textContent = `ليس هذا. فرصة واحدة لـ${G.names[answering]}!`;
+        } else end(null, `لم يُصب أحد. الجواب الصحيح: ${right}`, "bad");
+      }
+    }));
+  }
+
+  function movement() {
+    const [title, text] = G.moves.pop();
+    main.innerHTML = `<section class="card move">
+      <div class="meta"><span class="chip">تحدّي حركة</span><span class="who">يلعب الفريقان معًا</span></div>
+      <p class="q">${title}</p><p>${text}</p>
+      <div class="actions">
+        <button class="btn ta" type="button" data-w="0">فاز ${esc(G.names[0])}</button>
+        <button class="btn" type="button" data-w="-1">تعادل</button>
+        <button class="btn tb" type="button" data-w="1">فاز ${esc(G.names[1])}</button>
+      </div></section>`;
+    main.querySelectorAll("[data-w]").forEach((b) => b.addEventListener("click", () => { const w = +b.dataset.w; if (w >= 0) pull(w); next(); }));
+  }
+
+  function pull(team) { G.pos += team === 0 ? -1 : 1; drawRope(); }
+
+  function finish() {
+    G.phase = "over"; drawRope();
+    const w = G.pos < 0 ? 0 : 1;
+    main.innerHTML = `<section class="card win" style="--c: var(--${w ? "b" : "a"})">
+      <h2>فاز ${esc(G.names[w])}!</h2>
+      <p>شدّ الحبل إلى خطّه بـ${AR(G.stats[w])} من الأجوبة الصحيحة. أحسن الفريقان!</p>
+      <div class="actions" style="margin-top:12px"><button class="btn main" id="again" type="button">جولة جديدة</button><button class="btn" id="back" type="button">غيّر الإعدادات</button></div>
+    </section>`;
+    $("again").addEventListener("click", () => begin());
+    $("back").addEventListener("click", setup);
+  }
+
+
+  // ---------- capture the squares (tic-tac-toe with questions) ----------
+  const LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  function gridStart() {
+    const cats = shuffle(G.cats.slice());
+    G.board = Array.from({ length: 9 }, (_, i) => ({ c: cats[i % cats.length], owner: null, used: false }));
+    gridShow();
+  }
+  function gridWinner() {
+    for (const [a, b, c] of LINES) { const o = G.board[a].owner; if (o !== null && o === G.board[b].owner && o === G.board[c].owner) return { team: o, line: [a, b, c] }; }
+    return null;
+  }
+  function gridShow(note) {
+    G.phase = "play"; drawRope();
+    const win = gridWinner(), full = G.board.every((x) => x.used);
+    const counts = [0, 1].map((t) => G.board.filter((x) => x.owner === t).length);
+    let status = `دور <span style="color: var(--${G.turn ? "b" : "a"})">${esc(G.names[G.turn])}</span>: اختر مربعًا.`;
+    if (win) status = `<span style="color: var(--${win.team ? "b" : "a"})">${esc(G.names[win.team])}</span> أكمل ثلاثة مربعات في خطّ واحد وفاز!`;
+    else if (full) status = counts[0] === counts[1] ? "تعادل! لكل فريق العدد نفسه من المربعات." :
+      `امتلأت اللوحة، وفاز <span style="color: var(--${counts[1] > counts[0] ? "b" : "a"})">${esc(G.names[counts[1] > counts[0] ? 1 : 0])}</span> بأكثر المربعات.`;
+    main.innerHTML = `<section class="card">
+      <p class="q" style="font-size:clamp(18px,3vw,24px)">${status}</p>
+      ${note ? `<p class="note ${note.cls}">${note.text}</p>` : ""}
+      <div class="board">${G.board.map((x, i) => `<button type="button" class="sqr${x.owner !== null ? " t" + x.owner : ""}${win && win.line.includes(i) ? " line" : ""}" data-i="${i}"
+          ${x.used || win ? "disabled" : ""}>${x.owner !== null ? (x.owner ? DROP : SUN) : x.used ? "<small>لم يُصب أحد</small>" : `<span>${x.c}</span>`}</button>`).join("")}</div>
+      ${win || full ? `<div class="actions"><button class="btn main" id="again2" type="button">جولة جديدة</button><button class="btn" id="back2" type="button">غيّر الإعدادات</button></div>` : ""}
+    </section>`;
+    main.querySelectorAll(".sqr:not([disabled])").forEach((b) => b.addEventListener("click", () => {
+      const cell = G.board[+b.dataset.i];
+      const item = takeFrom(cell.c);
+      ask(item, (w) => { cell.used = true; cell.owner = w; if (w !== null) G.stats[w]++; }, () => gridShow(), cell.c);
+    }));
+    $("again2")?.addEventListener("click", () => begin());
+    $("back2")?.addEventListener("click", setup);
+  }
+  function takeFrom(cat) {
+    let k = G.deck.findIndex((x) => x.c === cat);
+    if (k < 0) { G.deck = freshDeck(); k = G.deck.findIndex((x) => x.c === cat); }
+    return G.deck.splice(k, 1)[0];
+  }
+  const SUN = '<svg viewBox="0 0 46 46" aria-label="الفريق الأول"><circle cx="23" cy="23" r="10" fill="#f0a23a"/><g stroke="#f0a23a" stroke-width="3.5" stroke-linecap="round"><path d="M23 3v6M23 37v6M3 23h6M37 23h6M8.9 8.9l4.2 4.2M32.9 32.9l4.2 4.2M8.9 37.1l4.2-4.2M32.9 13.1l4.2-4.2"/></g></svg>';
+  const DROP = '<svg viewBox="0 0 46 46" aria-label="الفريق الثاني"><path d="M23 4C16 14 11 21 11 28a12 12 0 0 0 24 0c0-7-5-14-12-24z" fill="#4fa3e0"/></svg>';
+
+  // teacher shortcuts: 1/2/3 pick an option
+  document.addEventListener("keydown", (e) => {
+    if (e.target.tagName === "INPUT") return;
+    const k = { "1": 0, "2": 1, "3": 2, "١": 0, "٢": 1, "٣": 2 }[e.key];
+    const opts = main.querySelectorAll(".opt");
+    if (k !== undefined && opts[k]) opts[k].click();
+  });
+
+  setup();
+})();
+</script>
