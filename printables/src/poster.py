@@ -94,8 +94,8 @@ body {{ font-family: "Readex Pro", sans-serif; color: #1f2430; direction: rtl; -
 .stars {{ position: absolute; top: 9mm; width: 26mm; height: 26mm; opacity: .9; }}
 .stars.r {{ right: 14mm; }} .stars.l {{ left: 14mm; }}
 
-main {{ flex: 1; padding: 7mm 12mm 5mm; display: flex; flex-direction: column; justify-content: space-between; gap: 6mm; }}
-.sec-head {{ display: flex; align-items: center; gap: 3.5mm; margin-bottom: 3mm; }}
+main {{ flex: 1; padding: 7mm 12mm 5mm; display: flex; flex-direction: column; justify-content: space-between; gap: 4mm; }}
+.sec-head {{ display: flex; align-items: center; gap: 3.5mm; margin-bottom: 2.4mm; }}
 .sec-head svg {{ width: 13mm; height: 13mm; flex: none; }}
 .sec-head h2 {{ font-family: "Reem Kufi", sans-serif; font-weight: 700; font-size: 25pt; color: var(--deep); }}
 .sec-head .count {{ margin-inline-start: auto; font-size: 11pt; font-weight: 600; color: var(--c); border: .5mm solid var(--c); border-radius: 20px; padding: .7mm 4mm; }}
