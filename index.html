@@ -613,7 +613,13 @@ const CONFIG = {
       success: "مرحبًا بكم في محطة الدوج بول! اكتبوا الآن الرقم الذي حصلتم عليه في كل جواب.", wrong: "هذه ليست كلمة السر. اطلبوها من المعلّم عند المحطة." },
       ...defaultScoreSteps(["الأول", "الثاني", "الثالث", "الرابع"])] },
     // محطة الإسفنج
-    { id: "s4", name: "محطة الإسفنج", icon: "sponge", code: "404", round: 1, location: "برع" },
+    { id: "s4", name: "محطة الإسفنج", icon: "sponge", round: 1, location: "برع", steps: [
+      { label: "اكتبوا كلمة السر لتدخلوا المحطة", button: "ادخلوا", placeholder: "كلمة السر", water: 0, accept: ["اسفنج", "الاسفنج"],
+        success: "مرحبًا بكم في محطة الإسفنج! اكتبوا الآن النتيجة التي حصلتم عليها.", wrong: "هذه ليست كلمة السر. اطلبوها من المعلّم عند المحطة." },
+      { label: "اكتبوا النتيجة التي حصلتم عليها، من ٠٫٢٥ إلى ٣", button: "أدخل الرقم", placeholder: "٠٫٢٥ - ٣", decimal: true, max: 3,
+        values: [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3],
+        success: "سُجّلت نتيجتكم! اذهبوا واسقوا البذرة.", wrong: "اكتبوا رقمًا من ٠٫٢٥ إلى ٣ بخطوة ٠٫٢٥، مثل ١ أو ١٫٥ أو ٢٫٢٥." }
+    ] },
     // الجولة الثانية: يكتب المعلّم «فوز» أو «خسر» في خانة المحطة
     { id: "s5", name: "محطة الأوراق", icon: "leaf", round: 2, location: "صالة التيكواندو", steps: [ { label: "يكتب المعلّم النتيجة هنا", button: "أدخل الرمز", placeholder: "رمز المعلّم",
         wrong: "هذا الرمز غير صحيح. اطلبوا من المعلّم أن يكتبه.",
@@ -876,7 +882,15 @@ function stepMatches(step, raw) {
   return !!(step.keywords && step.keywords.length && step.keywords.every(k => v.includes(norm2(k))));
 }
 // a step with `results` takes one of several codes, each giving its own share of water (e.g. win / lose)
-const matchResult = (step, raw) => step.results ? step.results.find(r => stepMatches(r, raw)) || null : (stepMatches(step, raw) ? step : null);
+// a `decimal` step takes a number from a list (e.g. 0.25 ... 3); the water is value ÷ max of the station's water
+const parseDec = raw => { const v = norm(raw).replace(/[٫,،]/g, ".").replace(/\s+/g, ""); return /^\d+(\.\d+)?$/.test(v) ? parseFloat(v) : NaN; };
+const matchResult = (step, raw) => {
+  if (step.decimal) {
+    const x = parseDec(raw), hit = (step.values || []).find(v => Math.abs(v - x) < 1e-9);
+    return hit == null ? null : { water: hit / step.max, toast: hit >= step.max * .75 ? "ماء كثير من" : "ماء من", success: step.success };
+  }
+  return step.results ? step.results.find(r => stepMatches(r, raw)) || null : (stepMatches(step, raw) ? step : null);
+};
 // stations tied to a round stay closed until the teacher starts that round
 const roundLocked = st => !!(CONFIG.reportUrl && st.round && round.n < st.round && forcedFor() !== st);
 
@@ -1015,11 +1029,11 @@ function renderStations() {
     li.querySelector(".st-step").textContent = multi && !done ? `الخطوة ${toAr(k + 1)} من ${toAr(steps.length)}: ` : "";
     li.querySelector(".st-label").textContent = step.label;
     li.querySelector(".st-go").textContent = step.button || "تحقّق";
-    const inp = li.querySelector("input"), codeLike = step.code || step.numeric;
+    const inp = li.querySelector("input"), codeLike = step.code || (step.numeric && !step.decimal);
     inp.placeholder = codeLike ? "• • •" : (step.placeholder || "");
     inp.classList.toggle("text", !codeLike);
-    inp.classList.toggle("num", !!step.numeric);
-    inp.inputMode = step.numeric ? "numeric" : "text";
+    inp.classList.toggle("num", !!step.numeric && !step.decimal);
+    inp.inputMode = step.decimal ? "decimal" : step.numeric ? "numeric" : "text";
     [...li.querySelectorAll(".lt")].forEach((el, i) => {
       const open = i < k;
       el.classList.toggle("open", open); el.classList.toggle("cur", i === k && !done);
