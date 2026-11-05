@@ -275,6 +275,18 @@ button,input{font:inherit;color:inherit}
 .prayer{position:fixed;inset:0;z-index:60;display:grid;place-items:center;
   padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
   background:radial-gradient(ellipse at 50% 30%,rgba(28,88,72,.96),rgba(8,32,28,.98) 70%);animation:prayIn .5s ease}
+/* the team's station, pinned to the bottom of the screen so it never disappears */
+.stbar{position:fixed;left:0;right:0;bottom:0;z-index:45;display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 12px;align-items:center;
+  padding:8px max(14px,env(safe-area-inset-right,0px)) max(8px,env(safe-area-inset-bottom,0px)) max(14px,env(safe-area-inset-left,0px));
+  color:#3a2006;background:linear-gradient(180deg,#ffe9a6,var(--gold));border-top:3px solid #fff1bf;box-shadow:0 -6px 18px rgba(0,0,0,.35)}
+.stbar.soon{color:#fff;background:linear-gradient(180deg,#d9543f,#b03a28);border-top-color:#ffb3a5}
+.stbar[hidden]{display:none}
+.stbar .sb-ico{grid-row:span 2;width:46px;height:46px;border-radius:10px;display:grid;place-items:center;background:rgba(0,0,0,.22);color:#fff}
+.stbar .sb-ico svg{width:28px;height:28px}
+.stbar .sb-when{font-size:13px;font-weight:800;opacity:.92}
+.stbar .sb-name{font-size:20px;font-weight:800;line-height:1.2}
+.stbar .sb-name small{font-size:15px;font-weight:700;opacity:.92}
+body.has-stbar{padding-bottom:84px}
 @keyframes nextGlow{50%{box-shadow:inset 0 0 0 1px rgba(244,195,79,.5),0 0 16px rgba(244,195,79,.55)}}
 @keyframes prayIn{from{opacity:0}}
 .kicked{position:fixed;inset:0;z-index:70;display:grid;place-items:center;padding:20px;background:radial-gradient(ellipse at 50% 30%,rgba(90,34,28,.97),rgba(30,10,8,.99) 70%);animation:prayIn .4s ease}
@@ -292,7 +304,7 @@ button,input{font:inherit;color:inherit}
 /* group rotation: the team's station for this shawt lights up, with where to go */
 .assign{margin:0 12px 10px;padding:10px 12px;border-radius:8px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;align-items:center;color:#3a2006;
   background:linear-gradient(180deg,#ffe9a6,var(--gold));box-shadow:0 0 0 2px #fff1bf,0 0 18px rgba(244,195,79,.55)}
-.assign.next{animation:nextGlow 2.4s ease-in-out infinite;color:var(--ink);background:rgba(0,0,0,.3);box-shadow:inset 0 0 0 1px rgba(244,195,79,.5)}
+.assign.soon{animation:nextGlow 2.4s ease-in-out infinite;color:var(--ink);background:rgba(0,0,0,.3);box-shadow:inset 0 0 0 1px rgba(244,195,79,.5)}
 .assign .a-ico{grid-row:span 3;width:52px;height:52px;border-radius:10px;display:grid;place-items:center;color:var(--gold);background:linear-gradient(160deg,var(--sky-500),var(--sky-900))}
 .assign .a-ico svg{width:30px;height:30px}
 .assign .a-when{font-size:13px;font-weight:800;opacity:.85}
@@ -513,6 +525,11 @@ button,input{font:inherit;color:inherit}
     <div class="b-head"><h2>المحطات</h2><div class="plank"></div></div>
     <div class="b-sub"><span id="openCount">المحطات المفتوحة: ٠ من ٦</span><span class="pips" id="pips"></span></div>
     <p class="b-help">اضغط على المحطة واكتب كلمة السر التي حصلت عليها من اللعبة، فيمتلئ إبريق السقي.</p>
+    <div class="stbar" id="stbar" hidden aria-live="polite">
+      <span class="sb-ico" id="sbIco"></span>
+      <span class="sb-when" id="sbWhen"></span>
+      <span class="sb-name" id="sbName"></span>
+    </div>
     <div class="assign" id="assign" hidden aria-live="polite">
       <span class="a-ico" id="aIco"></span>
       <span class="a-when" id="aWhen"></span>
@@ -1483,8 +1500,17 @@ let lastAssignKey = "";
 function renderAssign() {
   const a = assignment(), box = $("#assign");
   box.hidden = !a || round.status === "over";
+  const bar = $("#stbar"), showBar = !!a && round.status !== "over";
+  bar.hidden = !showBar;
+  document.body.classList.toggle("has-stbar", showBar);
   if (!a) { lastAssignKey = ""; return; }
-  box.classList.toggle("next", a.when !== "now");
+  bar.classList.toggle("soon", a.when !== "now");
+  $("#sbIco").innerHTML = ICONS[a.st.icon] || ICONS.star;
+  $("#sbWhen").textContent = a.when === "now" ? "محطتكم الآن" : "اذهبوا الآن إلى محطتكم القادمة وانتظروا بدء الشوط";
+  $("#sbName").innerHTML = "";
+  $("#sbName").append(a.st.name + " ");
+  { const sm = document.createElement("small"); sm.textContent = "· " + whereOf(a.st); $("#sbName").append(sm); }
+  box.classList.toggle("soon", a.when !== "now");
   $("#aIco").innerHTML = ICONS[a.st.icon] || ICONS.star;
   $("#aWhen").textContent = a.when === "now" ? "محطتكم الآن، اذهبوا إليها" : "اذهبوا الآن إلى محطتكم القادمة وانتظروا بدء الشوط";
   $("#aName").textContent = a.st.name;
