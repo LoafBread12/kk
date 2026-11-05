@@ -176,6 +176,8 @@ button,input{font:inherit;color:inherit}
 .pause-card{width:min(100%,400px);display:grid;gap:6px;padding:16px 20px;border-radius:10px;text-align:center;
   background:rgba(14,10,6,.9);border:2px solid var(--gold);box-shadow:0 16px 40px rgba(0,0,0,.5)}
 .pause-card h2{margin:0;font-family:var(--f-display);font-weight:400;font-size:30px;line-height:1.2;color:var(--gold)}
+.pause-st{display:grid;gap:2px;margin-top:6px;padding:10px 12px;border-radius:8px;color:#fff;background:linear-gradient(180deg,#d9543f,#b03a28);box-shadow:0 0 0 2px #ffb3a5}
+.pause-st small{font-size:14px;font-weight:800;opacity:.95}.pause-st b{font-size:26px;line-height:1.2}.pause-st span{font-size:17px;font-weight:700}
 .pause-card p{margin:0;font-size:16px;font-weight:600}
 /* round clock: a card under the stations with the countdown ring and the round's four parts */
 .timebox{margin:4px 12px 0;padding:12px 14px 14px;border-radius:8px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 14px;align-items:center;
@@ -506,7 +508,7 @@ body.has-stbar{padding-bottom:84px}
     </div>
 
     <div class="pause" id="pause" hidden>
-      <div class="pause-card" role="status" aria-live="polite"><h2 id="pauseTitle"></h2><p id="pauseText"></p></div>
+      <div class="pause-card" role="status" aria-live="polite"><h2 id="pauseTitle"></h2><p id="pauseText"></p><div class="pause-st" id="pauseSt" hidden><small id="psWhen"></small><b id="psName"></b><span id="psWhere"></span></div></div>
     </div>
 
     <div class="gauge" id="gauge">
@@ -1502,6 +1504,10 @@ function renderAssign() {
   box.hidden = !a || round.status === "over";
   const bar = $("#stbar"), showBar = !!a && round.status !== "over";
   bar.hidden = !showBar;
+  // the same pointer inside the big "wait for the teacher" card, so it stays on screen the whole break
+  const ps = $("#pauseSt"), nextOne = !!a && a.when === "next" && round.status !== "over";
+  ps.hidden = !nextOne;
+  if (nextOne) { $("#psWhen").textContent = "محطتكم القادمة، اذهبوا إليها الآن"; $("#psName").textContent = a.st.name; $("#psWhere").textContent = whereOf(a.st); }
   document.body.classList.toggle("has-stbar", showBar);
   if (!a) { lastAssignKey = ""; return; }
   bar.classList.toggle("soon", a.when !== "now");
@@ -1574,6 +1580,7 @@ function renderRound() {
   }[round.status];
   p.hidden = !msg || complete || round.prayer;
   if (msg) { $("#pauseTitle").textContent = msg[0]; $("#pauseText").textContent = msg[1]; }
+  renderAssign();
   if (!canWater()) { dragging = false; keyPour = false; garden.classList.remove("pouring"); }
 }
 
