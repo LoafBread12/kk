@@ -1519,7 +1519,8 @@ let lastAssignKey = "";
 function renderAssign() {
   const a = assignment(), box = $("#assign");
   box.hidden = !a || round.status === "over";
-  const bar = $("#stbar"), showBar = !!a && round.status !== "over";
+  // the pinned bar is only for the wait between shawts; while a shawt runs it is not needed
+  const bar = $("#stbar"), showBar = !!a && a.when === "next" && round.status !== "over";
   bar.hidden = !showBar;
   // the same pointer inside the big "wait for the teacher" card, so it stays on screen the whole break
   const ps = $("#pauseSt"), nextOne = !!a && a.when === "next" && round.status !== "over";
