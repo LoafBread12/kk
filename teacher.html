@@ -464,7 +464,17 @@ async function control(action, extra) {
   document.querySelectorAll(".controls .btn").forEach(b => b.disabled = true);
   try {
     const res = await fetch(URL_, { method: "POST", body: JSON.stringify({ type: "control", action, pin: PIN, ...(extra || {}) }) });
-    const j = await res.json();
+    const raw = await res.text();
+    let j;
+    try { j = JSON.parse(raw); }
+    catch (e) {
+      // Apps Script answered with an error page instead of JSON: show what it said, it names the real problem
+      const msg = raw.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 160);
+      ctrlMsg("ردّ الجدول غير متوقّع (قد يكون الأمر لم يُنفَّذ، حدّث الصفحة وتحقّق): " + (msg || "رد فارغ") , "err");
+      document.querySelectorAll(".controls .btn").forEach(b => b.disabled = false);
+      await load();
+      return;
+    }
     if (j.error === "bad_pin") {
       PIN = ""; try { localStorage.removeItem("bustan-pin"); } catch (e) {}
       pendingAction = [action, extra]; $("#pinForm").hidden = false; $("#pinMsg").textContent = "الرمز غير صحيح، حاول مرة أخرى."; $("#pinInput").focus();
@@ -480,7 +490,7 @@ async function control(action, extra) {
       if (action === "goto" && extra) ctrlMsg(`تم: بدأ الشوط ${toAr(j.state.part)} من الجولة ${toAr(j.state.round)} من جديد.`, "ok");
     }
   } catch (e) {
-    ctrlMsg("لم يصل الأمر إلى الجدول. تحقّق من الاتصال وحاول مرة أخرى.", "err");
+    ctrlMsg("لم يصل الأمر إلى الجدول (" + (e && e.message ? e.message : "خطأ في الاتصال") + "). قد يكون الجدول مشغولًا بتقارير الفرق، انتظر قليلًا وحاول مرة أخرى، ثم حدّث الصفحة للتحقق من أن الأمر لم يُنفَّذ.", "err");
   }
   document.querySelectorAll(".controls .btn").forEach(b => b.disabled = false);
   await load();
