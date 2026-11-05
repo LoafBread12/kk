@@ -238,7 +238,7 @@ h1{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(28px,5v
   </section>
 
   <section class="panel" id="viewReplay" hidden aria-labelledby="rpTitle">
-    <h2 id="rpTitle">نتائج اللعبة</h2>
+    <h2 id="rpTitle">نتائج اللعبة حتى الآن</h2>
     <p class="sub">إعادة لنموّ نباتات الفرق جولةً بعد جولة. طول العمود = طول النبتة.</p>
     <div class="rp-head">
       <div><div class="rp-round" id="rpRound">الجولة ١</div><div class="rp-clock" id="rpClock"></div></div>
@@ -444,7 +444,9 @@ function renderControls() {
   }
   tickTeacherTimer();
   $("#btnOver").hidden = s === "over" || n === 0;
-  $("#tabReplay").hidden = s !== "over";
+  // results can be shown any time after the first round starts, without ending the game
+  $("#tabReplay").hidden = !(n > 0 || s === "over");
+  $("#tabReplay").textContent = s === "over" ? "النتائج النهائية" : "عرض النتائج";
 }
 
 let msgTimer = 0;
@@ -733,7 +735,7 @@ async function load() {
     $("#status").className = "status";
     $("#status").textContent = "آخر تحديث: " + new Date().toLocaleTimeString("ar") + "، يتحدّث كل ١٠ ثوانٍ.";
     if (game.status === "over" && !seenOver) { seenOver = true; if (view !== "replay") showView("replay"); }
-    if (game.status !== "over") { seenOver = false; if (view === "replay") showView("cards"); }
+    if (game.status !== "over") { seenOver = false; if (view === "replay" && !(game.round > 0)) showView("cards"); }
   } catch (e) {
     $("#status").className = "status err";
     $("#status").textContent = "تعذّر جلب التقدّم. تأكّد من رابط reportUrl ومن أن النشر متاح لـ Anyone.";
