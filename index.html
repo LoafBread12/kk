@@ -394,9 +394,6 @@ body.has-stbar{padding-bottom:84px}
 .station.shake{animation:shake .45s}
 @keyframes shake{20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
 
-.b-foot{margin-top:auto;padding:10px 14px 14px;display:flex;justify-content:flex-start}
-.reset{border:1px solid rgba(255,255,255,.25);background:rgba(0,0,0,.25);color:var(--ink-mut);border-radius:20px;padding:4px 14px;font-size:13px;font-weight:600;cursor:pointer}
-.reset.arm{background:#8a2c1e;border-color:#ffb4a3;color:#fff}
 
 @media (max-width:860px){
   html,body{height:auto}
@@ -547,7 +544,6 @@ body.has-stbar{padding-bottom:84px}
       <div class="tb-head"><p class="tb-round" id="tbRound">الجولة ١</p><p class="tb-status" id="tbStatus" aria-live="polite"></p></div>
       <ol class="tb-parts" id="tbParts" aria-label="أشواط الجولة"></ol>
     </section>
-    <div class="b-foot"><button class="reset" id="reset" type="button">بدء من جديد</button></div>
   </aside>
 </div>
 
@@ -1473,24 +1469,7 @@ function finish(animate) {
   }
 }
 
-/* ---------- reset (two taps, for the teacher) ---------- */
-const resetBtn = $("#reset"); let resetTimer = 0;
-resetBtn.addEventListener("click", () => {
-  if (!resetBtn.classList.contains("arm")) {
-    resetBtn.classList.add("arm"); resetBtn.textContent = "اضغط مرة أخرى للتأكيد";
-    resetTimer = setTimeout(() => { resetBtn.classList.remove("arm"); resetBtn.textContent = "بدء من جديد"; }, 3500);
-    return;
-  }
-  clearTimeout(resetTimer);
-  resetBtn.classList.remove("arm"); resetBtn.textContent = "بدء من جديد";
-  state = { unlocked: [], water: 0, progress: 0, team: "", gameId: state.gameId, adj: state.adj, steps: {}, quests: {}, group: 0 };
-  renderQuests();
-  complete = false; parts = []; wet = 0;
-  save(true);
-  if (openId) toggleStation(openId);
-  renderStations(); setStage(0, false);
-  showTeam();
-});
+/* a player cannot restart the game: only the teacher can (the "new game" button in the teacher page) */
 
 /* ---------- team name + reporting to the teacher ---------- */
 const joinEl = $("#join"), teamInput = $("#teamName");
