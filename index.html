@@ -1246,8 +1246,17 @@ const sfx = (() => {
   // WebAudio unless a media element is playing. So: on every tap, create/resume the context, play a silent buffer,
   // and loop a silent <audio> element. The listeners stay on, because the phone can suspend the audio again.
   let keep = null;
-  const SILENT = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
+  // a real (not empty) silent WAV: an empty one is refused by Safari
+  function silentWav() {
+    const n = 4410, buf = new ArrayBuffer(44 + n), v = new DataView(buf), w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    w(0, "RIFF"); v.setUint32(4, 36 + n, true); w(8, "WAVE"); w(12, "fmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, 22050, true); v.setUint32(28, 22050, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true); w(36, "data"); v.setUint32(40, n, true);
+    for (let i = 0; i < n; i++) v.setUint8(44 + i, 128);
+    return URL.createObjectURL(new Blob([buf], { type: "audio/wav" }));
+  }
   function unlock() {
+    // Safari 16.4+: play sound even when the ringer switch is on silent
+    try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) {}
     init();
     if (!ac) return;
     try {
@@ -1255,7 +1264,7 @@ const sfx = (() => {
       const b = ac.createBuffer(1, 1, 22050), s = ac.createBufferSource(); s.buffer = b; s.connect(ac.destination); s.start(0);
     } catch (e) {}
     try {
-      if (!keep) { keep = new Audio(SILENT); keep.loop = true; keep.setAttribute("playsinline", ""); keep.volume = .01; }
+      if (!keep) { keep = new Audio(silentWav()); keep.loop = true; keep.setAttribute("playsinline", ""); keep.volume = .01; }
       if (keep.paused) { const pr = keep.play(); if (pr && pr.catch) pr.catch(() => {}); }
     } catch (e) {}
   }
@@ -1272,6 +1281,7 @@ const sfx = (() => {
   return {
     setMuted(m) { muted = m; try { localStorage.setItem("bustan-mute", m ? "1" : "0"); } catch (e) {} if (master) master.gain.setTargetAtTime(m ? 0 : .9, ac.currentTime, .05); },
     get muted() { return muted; },
+    get running() { return !!ac && ac.state === "running"; },
     // a short drop, played when the sound button is tapped, so the team hears that the sound works
     test() { unlock(); if (ac && ac.state === "running" && !muted) drip(ac.currentTime + .02, .25, 1100); else if (ac) ac.resume().then(() => { if (!muted) drip(ac.currentTime + .02, .25, 1100); }).catch(() => {}); },
     // the stream of water: filtered noise that follows the pouring, louder when it lands on the soil
@@ -1319,7 +1329,11 @@ const sfx = (() => {
 (() => {
   const b = document.getElementById("snd");
   const paint = () => { b.innerHTML = sfx.muted ? SND_OFF : SND_ON; b.setAttribute("aria-pressed", String(!sfx.muted)); b.title = sfx.muted ? "تشغيل الصوت" : "إيقاف الصوت"; };
-  b.addEventListener("click", e => { e.stopPropagation(); sfx.setMuted(!sfx.muted); paint(); sfx.test(); });
+  b.addEventListener("click", e => {
+    e.stopPropagation(); sfx.setMuted(!sfx.muted); paint(); sfx.test();
+    // if the phone still blocks the sound, say what to check
+    if (!sfx.muted) setTimeout(() => { if (!sfx.running) toast("الصوت لا يعمل بعد", "ارفعوا صوت الجهاز وأوقفوا زر الصامت، ثم المسوا الشاشة", 5000); }, 700);
+  });
   b.addEventListener("pointerdown", e => e.stopPropagation());
   paint();
 })();
