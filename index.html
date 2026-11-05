@@ -127,7 +127,7 @@ button,input{font:inherit;color:inherit}
 @keyframes fill{30%{transform:scale(1.18) rotate(6deg)}60%{transform:scale(.96)}}
 
 .hud{position:absolute;top:14px;left:50%;translate:-50% 0;z-index:5;pointer-events:none;display:grid;justify-items:center;gap:8px;width:min(94%,520px)}
-.snd{position:absolute;top:6px;inset-inline-start:8px;width:34px;height:34px;border:0;border-radius:50%;display:grid;place-items:center;cursor:pointer;color:#e9f6ff;background:rgba(255,255,255,.14)}
+.snd{pointer-events:auto;z-index:3;position:absolute;top:6px;inset-inline-start:8px;width:34px;height:34px;border:0;border-radius:50%;display:grid;place-items:center;cursor:pointer;color:#e9f6ff;background:rgba(255,255,255,.14)}
 .snd:hover{background:rgba(255,255,255,.26)}.snd svg{width:20px;height:20px}
 .plaque{position:relative;background:rgba(10,30,45,.62);border:2px solid rgba(255,255,255,.12);border-radius:10px;padding:8px 22px 12px;display:grid;justify-items:center;gap:4px;backdrop-filter:blur(3px)}
 .g-title{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(26px,4.4cqw,38px);line-height:1.15;letter-spacing:.5px;text-shadow:0 2px 0 rgba(0,0,0,.45)}
@@ -1242,8 +1242,25 @@ const sfx = (() => {
       const d = noiseBuf.getChannelData(0); for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
     } catch (e) { ac = null; }
   }
-  const unlock = () => { init(); if (ac && ac.state === "suspended") ac.resume(); };
-  ["pointerdown", "keydown", "touchstart"].forEach(ev => window.addEventListener(ev, unlock, { passive: true }));
+  // Phones only let sound start from a real tap (iOS: touchend/click, not touchstart), and the iPhone silent switch mutes
+  // WebAudio unless a media element is playing. So: on every tap, create/resume the context, play a silent buffer,
+  // and loop a silent <audio> element. The listeners stay on, because the phone can suspend the audio again.
+  let keep = null;
+  const SILENT = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
+  function unlock() {
+    init();
+    if (!ac) return;
+    try {
+      if (ac.state !== "running") ac.resume();
+      const b = ac.createBuffer(1, 1, 22050), s = ac.createBufferSource(); s.buffer = b; s.connect(ac.destination); s.start(0);
+    } catch (e) {}
+    try {
+      if (!keep) { keep = new Audio(SILENT); keep.loop = true; keep.setAttribute("playsinline", ""); keep.volume = .01; }
+      if (keep.paused) { const pr = keep.play(); if (pr && pr.catch) pr.catch(() => {}); }
+    } catch (e) {}
+  }
+  ["touchend", "pointerup", "click", "keydown", "mousedown"].forEach(ev => window.addEventListener(ev, unlock, { capture: true, passive: true }));
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && ac && ac.state !== "running") try { ac.resume(); } catch (e) {} });
   const noise = (loop) => { const s = ac.createBufferSource(); s.buffer = noiseBuf; s.loop = !!loop; return s; };
   // one water drop: a short sine that falls in pitch, like a drip landing in water
   function drip(t, vol, f0) {
@@ -1255,6 +1272,8 @@ const sfx = (() => {
   return {
     setMuted(m) { muted = m; try { localStorage.setItem("bustan-mute", m ? "1" : "0"); } catch (e) {} if (master) master.gain.setTargetAtTime(m ? 0 : .9, ac.currentTime, .05); },
     get muted() { return muted; },
+    // a short drop, played when the sound button is tapped, so the team hears that the sound works
+    test() { unlock(); if (ac && ac.state === "running" && !muted) drip(ac.currentTime + .02, .25, 1100); else if (ac) ac.resume().then(() => { if (!muted) drip(ac.currentTime + .02, .25, 1100); }).catch(() => {}); },
     // the stream of water: filtered noise that follows the pouring, louder when it lands on the soil
     pour(on, aimed) {
       if (!ac || ac.state !== "running") return;
@@ -1300,7 +1319,7 @@ const sfx = (() => {
 (() => {
   const b = document.getElementById("snd");
   const paint = () => { b.innerHTML = sfx.muted ? SND_OFF : SND_ON; b.setAttribute("aria-pressed", String(!sfx.muted)); b.title = sfx.muted ? "تشغيل الصوت" : "إيقاف الصوت"; };
-  b.addEventListener("click", e => { e.stopPropagation(); sfx.setMuted(!sfx.muted); paint(); });
+  b.addEventListener("click", e => { e.stopPropagation(); sfx.setMuted(!sfx.muted); paint(); sfx.test(); });
   b.addEventListener("pointerdown", e => e.stopPropagation());
   paint();
 })();
