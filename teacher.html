@@ -95,6 +95,7 @@ h1{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(28px,5v
 .t-acts{display:flex;gap:6px;margin-top:2px}
 .t-acts button{flex:1;border:0;border-radius:6px;padding:6px 8px;font-weight:800;font-size:14px;cursor:pointer}
 .t-up{color:#0f2d0c;background:linear-gradient(180deg,#c9f0b0,var(--leaf) 60%,#4c9a35);box-shadow:inset 0 -2px 0 rgba(0,0,0,.2)}
+.t-next{color:#8a4b00;font-weight:800}
 .t-kick{color:#fff;background:linear-gradient(180deg,#6b5a5a,#463838 60%,#2e2424);box-shadow:inset 0 -2px 0 rgba(0,0,0,.2)}.t-kick.arm{background:linear-gradient(180deg,#e9735f,#c0392b 60%,#8e2a1f)}
 .t-down{color:#fff;background:linear-gradient(180deg,#e9735f,#c0392b 60%,#8e2a1f);box-shadow:inset 0 -2px 0 rgba(0,0,0,.2)}
 .t-acts button:disabled{opacity:.5;cursor:wait}
@@ -339,6 +340,13 @@ function renderCards(rows) {
     if (r.group) {
       const now = game.status === "running" ? stationFor(r.group, game.round, game.part) : null;
       card.append(el("div", "t-adj", "المجموعة " + toAr(r.group) + (now ? "، الآن في: " + now.name : "")));
+    }
+    // between shawts: where this team must go next, so the shawt starts when every team is at its station
+    if (r.group && hasRounds && game.status !== "running" && game.status !== "over") {
+      const nr = game.status === "break" ? game.round : game.status === "ended" ? game.round + 1 : 1;
+      const np = game.status === "break" ? (game.part || 0) + 1 : 1;
+      const nx = (game.status === "break" || game.status === "ended" || game.round === 0) ? stationFor(r.group, nr, np) : null;
+      if (nx) card.append(el("div", "t-adj t-next", "الشوط القادم: " + nx.name + (nx.location ? "، " + nx.location : "")));
     }
     if (r.adj) card.append(el("div", "t-adj", "تعديل المعلّم: " + fmtD(r.adj)));
     if (r.items) card.append(el("div", "t-adj", `هدايا لم يستخدمها الفريق بعد: ${toAr(r.items)}`));

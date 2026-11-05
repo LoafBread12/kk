@@ -275,6 +275,7 @@ button,input{font:inherit;color:inherit}
 .prayer{position:fixed;inset:0;z-index:60;display:grid;place-items:center;
   padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
   background:radial-gradient(ellipse at 50% 30%,rgba(28,88,72,.96),rgba(8,32,28,.98) 70%);animation:prayIn .5s ease}
+@keyframes nextGlow{50%{box-shadow:inset 0 0 0 1px rgba(244,195,79,.5),0 0 16px rgba(244,195,79,.55)}}
 @keyframes prayIn{from{opacity:0}}
 .kicked{position:fixed;inset:0;z-index:70;display:grid;place-items:center;padding:20px;background:radial-gradient(ellipse at 50% 30%,rgba(90,34,28,.97),rgba(30,10,8,.99) 70%);animation:prayIn .4s ease}
 .kicked-card{width:min(100%,440px);display:grid;justify-items:center;gap:12px;text-align:center;color:#fbe9e4}
@@ -291,7 +292,7 @@ button,input{font:inherit;color:inherit}
 /* group rotation: the team's station for this shawt lights up, with where to go */
 .assign{margin:0 12px 10px;padding:10px 12px;border-radius:8px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;align-items:center;color:#3a2006;
   background:linear-gradient(180deg,#ffe9a6,var(--gold));box-shadow:0 0 0 2px #fff1bf,0 0 18px rgba(244,195,79,.55)}
-.assign.next{color:var(--ink);background:rgba(0,0,0,.3);box-shadow:inset 0 0 0 1px rgba(244,195,79,.5)}
+.assign.next{animation:nextGlow 2.4s ease-in-out infinite;color:var(--ink);background:rgba(0,0,0,.3);box-shadow:inset 0 0 0 1px rgba(244,195,79,.5)}
 .assign .a-ico{grid-row:span 3;width:52px;height:52px;border-radius:10px;display:grid;place-items:center;color:var(--gold);background:linear-gradient(160deg,var(--sky-500),var(--sky-900))}
 .assign .a-ico svg{width:30px;height:30px}
 .assign .a-when{font-size:13px;font-weight:800;opacity:.85}
@@ -1485,11 +1486,14 @@ function renderAssign() {
   if (!a) { lastAssignKey = ""; return; }
   box.classList.toggle("next", a.when !== "now");
   $("#aIco").innerHTML = ICONS[a.st.icon] || ICONS.star;
-  $("#aWhen").textContent = a.when === "now" ? "محطتكم الآن، اذهبوا إليها" : "محطتكم في الشوط القادم";
+  $("#aWhen").textContent = a.when === "now" ? "محطتكم الآن، اذهبوا إليها" : "اذهبوا الآن إلى محطتكم القادمة وانتظروا بدء الشوط";
   $("#aName").textContent = a.st.name;
   $("#aWhere").textContent = whereOf(a.st);
   const key = a.when + a.st.id + round.n + round.part;
-  if (a.when === "now" && lastAssignKey && key !== lastAssignKey) toast("اذهبوا إلى " + a.st.name, whereOf(a.st), 4200);
+  if (lastAssignKey && key !== lastAssignKey) {
+    if (a.when === "now") toast("اذهبوا إلى " + a.st.name, whereOf(a.st), 4200);
+    else toast("محطتكم القادمة: " + a.st.name, whereOf(a.st) + ". اذهبوا إليها وانتظروا بدء الشوط", 5200);
+  }
   lastAssignKey = key;
 }
 /* ---------- rounds: the teacher starts and ends them; watering only while one is running ---------- */
