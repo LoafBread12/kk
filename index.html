@@ -612,10 +612,10 @@ const CONFIG = {
     { id: "s4", name: "محطة الإسفنج", icon: "sponge", round: 1, location: "برع", steps: [
       { label: "اكتبوا كلمة السر لتدخلوا المحطة", button: "ادخلوا", placeholder: "كلمة السر", water: 0, accept: ["اسفنج", "الاسفنج"],
         success: "مرحبًا بكم في محطة الإسفنج! اكتبوا الآن النتيجة التي حصلتم عليها.", wrong: "هذه ليست كلمة السر. اطلبوها من المعلّم عند المحطة." },
-      { label: "اكتبوا النتيجة التي حصلتم عليها، من ٠٫٢٥ إلى ٣", button: "أدخل الرقم", placeholder: "٠٫٢٥ - ٣", decimal: true, max: 3,
-        values: [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3],
-        shares: Object.fromEntries([0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3].map(v => [v, v <= 1.75 ? v / 2 : 1 + (v - 1.75) / 2.5])),
-        success: "سُجّلت نتيجتكم! اذهبوا واسقوا البذرة.", wrong: "اكتبوا رقمًا من ٠٫٢٥ إلى ٣ بخطوة ٠٫٢٥، مثل ١ أو ١٫٥ أو ٢٫٢٥." }
+      { label: "اكتبوا النتيجة التي حصلتم عليها، من ٠ إلى ٦", button: "أدخل الرقم", placeholder: "٠ - ٦", decimal: true, max: 6,
+        values: Array.from({ length: 25 }, (_, i) => i * 0.25),
+        shares: Object.fromEntries(Array.from({ length: 25 }, (_, i) => i * 0.25).map(v => [v, v <= 3.5 ? v / 4 : 1 + (v - 3.5) / 5])),
+        success: "سُجّلت نتيجتكم! اذهبوا واسقوا البذرة.", wrong: "اكتبوا رقمًا من ٠ إلى ٦ بخطوة ٠٫٢٥، مثل ١ أو ٢٫٥ أو ٤٫٧٥." }
     ] },
     // الجولة الثانية: يكتب المعلّم «فوز» أو «خسر» في خانة المحطة
     { id: "s5", name: "محطة الأوراق", icon: "leaf", round: 2, location: "صالة التيكواندو", steps: [ { label: "يكتب المعلّم النتيجة هنا", button: "أدخل الرمز", placeholder: "رمز المعلّم",
@@ -886,7 +886,7 @@ const matchResult = (step, raw) => {
     const x = parseDec(raw), hit = (step.values || []).find(v => Math.abs(v - x) < 1e-9);
     // `shares` maps each value to its own share of the jug (it may go above 1 = more than 100%)
     const water = hit == null ? 0 : step.shares && step.shares[hit] != null ? step.shares[hit] : hit / step.max;
-    return hit == null ? null : { water, toast: water > 1 ? "ماء فوق ١٠٠٪ من" : water >= .75 ? "ماء كثير من" : "ماء من", success: step.success };
+    return hit == null ? null : { water, toast: water > 1 ? "ماء فوق ١٠٠٪ من" : water >= .75 ? "ماء كثير من" : water === 0 ? "لا ماء من" : "ماء من", success: step.success };
   }
   return step.results ? step.results.find(r => stepMatches(r, raw)) || null : (stepMatches(step, raw) ? step : null);
 };
