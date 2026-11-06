@@ -176,6 +176,8 @@ button,input{font:inherit;color:inherit}
 .pause-card{width:min(100%,400px);display:grid;gap:6px;padding:16px 20px;border-radius:10px;text-align:center;
   background:rgba(14,10,6,.9);border:2px solid var(--gold);box-shadow:0 16px 40px rgba(0,0,0,.5)}
 .pause-card h2{margin:0;font-family:var(--f-display);font-weight:400;font-size:30px;line-height:1.2;color:var(--gold)}
+.pause-res{display:grid;gap:2px;margin-top:6px;padding:12px 14px;border-radius:8px;color:#3a2006;background:linear-gradient(180deg,#ffe9a6,var(--gold));box-shadow:0 0 0 2px #fff1bf}
+.pause-res small{font-size:14px;font-weight:800;opacity:.9}.pause-res b{font-size:24px;line-height:1.35}
 .pause-st{display:grid;gap:2px;margin-top:6px;padding:10px 12px;border-radius:8px;color:#fff;background:linear-gradient(180deg,#d9543f,#b03a28);box-shadow:0 0 0 2px #ffb3a5}
 .pause-st small{font-size:14px;font-weight:800;opacity:.95}.pause-st b{font-size:26px;line-height:1.2}.pause-st span{font-size:17px;font-weight:700}
 .pause-card p{margin:0;font-size:16px;font-weight:600}
@@ -507,7 +509,7 @@ body.has-stbar{padding-bottom:84px}
     </div>
 
     <div class="pause" id="pause" hidden>
-      <div class="pause-card" role="status" aria-live="polite"><h2 id="pauseTitle"></h2><p id="pauseText"></p><div class="pause-st" id="pauseSt" hidden><small id="psWhen"></small><b id="psName"></b><span id="psWhere"></span></div></div>
+      <div class="pause-card" role="status" aria-live="polite"><h2 id="pauseTitle"></h2><p id="pauseText"></p><div class="pause-res" id="pauseRes" hidden><small>انتهت الجولة الأولى</small><b id="prText"></b></div><div class="pause-st" id="pauseSt" hidden><small id="psWhen"></small><b id="psName"></b><span id="psWhere"></span></div></div>
     </div>
 
     <div class="gauge" id="gauge">
@@ -1531,24 +1533,38 @@ function assignment() {
 const PIN_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" fill="currentColor"/></svg>';
 const whereOf = st => st.location || "يحدّد المعلّم المكان";
 let lastAssignKey = "";
+let wasRes = false;
 function renderAssign() {
   const a = assignment(), box = $("#assign");
   box.hidden = !a || round.status === "over";
+  // when the round after which results are shown has ended, everyone is told where to go for the results
+  const res = !!CONFIG.reportUrl && round.status === "ended" && round.n === (CONFIG.resultsAfterRound || 1);
+  const resMsg = "اذهبوا إلى " + (CONFIG.resultsPlace || "الحجرة الكبيرة") + " لعرض النتائج";
+  $("#pauseRes").hidden = !res;
+  if (res) $("#prText").textContent = resMsg;
+  if (res && !wasRes) toast("انتهت الجولة " + toAr(round.n), resMsg, 8000);
+  wasRes = res;
   // the pinned bar is only for the wait between shawts; while a shawt runs it is not needed
-  const bar = $("#stbar"), showBar = !!a && a.when === "next" && round.status !== "over";
+  const bar = $("#stbar"), showBar = res || (!!a && a.when === "next" && round.status !== "over");
   bar.hidden = !showBar;
   // the same pointer inside the big "wait for the teacher" card, so it stays on screen the whole break
   const ps = $("#pauseSt"), nextOne = !!a && a.when === "next" && round.status !== "over";
   ps.hidden = !nextOne;
   if (nextOne) { $("#psWhen").textContent = "محطتكم القادمة، اذهبوا إليها الآن"; $("#psName").textContent = a.st.name; $("#psWhere").textContent = whereOf(a.st); }
   document.body.classList.toggle("has-stbar", showBar);
+  if (res) {
+    bar.classList.add("soon"); $("#sbIco").innerHTML = ICONS.star;
+    $("#sbWhen").textContent = "انتهت الجولة " + toAr(round.n); $("#sbName").textContent = resMsg;
+  }
   if (!a) { lastAssignKey = ""; return; }
-  bar.classList.toggle("soon", a.when !== "now");
-  $("#sbIco").innerHTML = ICONS[a.st.icon] || ICONS.star;
-  $("#sbWhen").textContent = a.when === "now" ? "محطتكم الآن" : "اذهبوا الآن إلى محطتكم القادمة وانتظروا بدء الشوط";
-  $("#sbName").innerHTML = "";
-  $("#sbName").append(a.st.name + " ");
-  { const sm = document.createElement("small"); sm.textContent = "· " + whereOf(a.st); $("#sbName").append(sm); }
+  if (!res) {
+    bar.classList.toggle("soon", a.when !== "now");
+    $("#sbIco").innerHTML = ICONS[a.st.icon] || ICONS.star;
+    $("#sbWhen").textContent = a.when === "now" ? "محطتكم الآن" : "اذهبوا الآن إلى محطتكم القادمة وانتظروا بدء الشوط";
+    $("#sbName").innerHTML = "";
+    $("#sbName").append(a.st.name + " ");
+    { const sm = document.createElement("small"); sm.textContent = "· " + whereOf(a.st); $("#sbName").append(sm); }
+  }
   box.classList.toggle("soon", a.when !== "now");
   $("#aIco").innerHTML = ICONS[a.st.icon] || ICONS.star;
   $("#aWhen").textContent = a.when === "now" ? "محطتكم الآن، اذهبوا إليها" : "اذهبوا الآن إلى محطتكم القادمة وانتظروا بدء الشوط";
