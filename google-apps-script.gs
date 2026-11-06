@@ -224,6 +224,17 @@ function control_(d) {
     if (st.status === "break" && st.part < st.parts) startPart_(st.round, st.part + 1);
   } else if (d.action === "end") {                  // end the running part early
     if (st.status === "running") { closePart_(now); setState_({ status: st.part >= st.parts ? "ended" : "break", endsAt: now.getTime() }); }
+  } else if (d.action === "extend") {               // one more minute for the answers, also after the shawt (or round) ended
+    const p = PropertiesService.getScriptProperties();
+    if (st.status === "running") {
+      if (p.getProperty("prayer") === "1") setState_({ prayerLeft: Number(p.getProperty("prayerLeft") || 0) + 60000 });
+      else setState_({ endsAt: Number(p.getProperty("endsAt") || 0) + 60000 });
+    } else if ((st.status === "break" || st.status === "ended") && st.round > 0) {
+      // reopen the same shawt for a minute: clear its end time in the rounds sheet, it is written again when the minute ends
+      const ends = now.getTime() + 60000, sh = sheet_("rounds"), n = sh.getLastRow();
+      if (n >= 2) { sh.getRange(n, 3).setValue(""); sh.getRange(n, 5).setValue(new Date(ends)); }
+      setState_({ status: "running", endsAt: ends, prayerLeft: 60000 });
+    }
   } else if (d.action === "endRound") {             // end the whole round now
     if (st.status === "running") closePart_(now);
     if (st.status === "running" || st.status === "break") setState_({ status: "ended", endsAt: now.getTime() });
