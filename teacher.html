@@ -182,6 +182,7 @@ h1{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(28px,5v
     <div class="r-status"><span class="dot" id="dot"></span><span id="roundText">لم تبدأ أي جولة</span><span class="t-timer" id="tTimer" hidden></span></div>
     <button class="btn go" type="button" id="btnStart">ابدأ الجولة ١</button>
     <button class="btn go" type="button" id="btnPart">ابدأ الشوط ٢</button>
+    <button class="btn go" type="button" id="btnExtra" hidden>+ دقيقة إضافية</button>
     <button class="btn stop" type="button" id="btnEnd">أنهِ الشوط</button>
     <button class="btn stop" type="button" id="btnEndRound">أنهِ الجولة</button>
     <button class="btn lesson" type="button" id="btnLesson" aria-pressed="false">درس</button>
@@ -432,6 +433,8 @@ function renderControls() {
   $("#btnPart").textContent = `ابدأ الشوط ${toAr(part + 1)} من ${toAr(P)}`;
   $("#btnPart").hidden = !(s === "break" && part < P);
   $("#btnEnd").hidden = s !== "running";
+  // one more minute for the answers: while a shawt runs, or right after it (or the round) ended
+  $("#btnExtra").hidden = !(n > 0 && (s === "running" || s === "break" || s === "ended"));
   $("#btnEndRound").hidden = !(s === "running" || s === "break");
   const lesson = !!game.lesson;
   $("#btnLesson").hidden = s === "over";
@@ -493,6 +496,7 @@ async function control(action, extra) {
       ctrlMsg("لم يُنفَّذ الأمر (" + j.error + "). حاول مرة أخرى.", "err");
     } else if (j.state) {
       $("#pinForm").hidden = true; $("#pinMsg").textContent = "";
+      if (action === "extend") ctrlMsg("تمت إضافة دقيقة. يستطيع الفرق كتابة أجوبتهم الآن.", "ok");
       if (action === "kick") ctrlMsg("تم طرد الفريق من اللعبة.", "ok");
       if (action === "force") ctrlMsg(extra.station ? "تم: أُعطيت المحطة للمجموعة." : "تم: عادت المجموعة إلى الدوران.", "ok");
       if (action === "goto" && extra) ctrlMsg(`تم: بدأ الشوط ${toAr(j.state.part)} من الجولة ${toAr(j.state.round)} من جديد.`, "ok");
@@ -534,6 +538,7 @@ function adjust(r, delta, btn) {
 $("#btnStart").addEventListener("click", () => control("start"));
 $("#btnPart").addEventListener("click", () => control("part"));
 $("#btnEnd").addEventListener("click", () => control("end"));
+$("#btnExtra").addEventListener("click", () => control("extend"));
 $("#btnEndRound").addEventListener("click", () => control("endRound"));
 // fix a mistake: jump back (or forward) to any round and shawt
 function fillFix() {
