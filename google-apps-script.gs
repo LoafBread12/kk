@@ -87,6 +87,20 @@ function state_() {
 function kicked_() {
   try { const k = JSON.parse(PropertiesService.getScriptProperties().getProperty("kicked") || "[]"); return Array.isArray(k) ? k : []; } catch (e) { return []; }
 }
+// team names the teacher changed by hand: {deviceId: name}
+function names_() {
+  try { const n = JSON.parse(PropertiesService.getScriptProperties().getProperty("names") || "{}"); return n && typeof n === "object" ? n : {}; } catch (e) { return {}; }
+}
+function rename_(d) {
+  const id = clean_(d.id, 40), team = clean_(String(d.team || "").trim(), 30);
+  if (!id || !team) return out_({ error: "bad_name" });
+  const n = names_(); n[id] = team;
+  setState_({ names: JSON.stringify(n) });
+  const sh = sheet_("progress"), body = body_("progress");
+  const i = body.findIndex(r => String(r[0]) === id);
+  if (i >= 0) sh.getRange(i + 2, 2).setValue(team);
+  return out_({ ok: true, state: state_() });
+}
 function kick_(d) {
   const id = clean_(d.id, 40);
   if (!id) return out_({ error: "bad_team" });
@@ -146,7 +160,7 @@ function report_(d) {
   if (d.gameId && d.gameId !== st.gameId) return out_({ ignored: true, state: st });
   const now = new Date();
   const stations = Math.max(0, Math.min(99, Number(d.stations) || 0));
-  const team = clean_(d.team, 30);
+  const team = names_()[id] || clean_(d.team, 30);      // a name the teacher set wins over the device's
   const done = d.done ? "نعم" : "لا";
   const growth = round1_(Math.max(0, Math.min(1000, Number(d.growth) || 0)));
   const progress = sheet_("progress");
@@ -266,6 +280,8 @@ function control_(d) {
     const f = forced_();
     if (sid) f[g] = sid; else delete f[g];
     setState_({ forced: JSON.stringify(f) });
+  } else if (d.action === "rename") {             // change a team's name (the team's device adopts it too)
+    return rename_(d);
   } else if (d.action === "kick") {               // kick a team out of the game
     return kick_(d);
   } else if (d.action === "give") {
@@ -274,7 +290,7 @@ function control_(d) {
     return adjust_(d, st);
   } else if (d.action === "new") {
     clear_("progress"); clear_("log"); clear_("rounds"); clear_("items");
-    setState_({ status: "idle", round: 0, part: 0, endsAt: 0, lesson: "0", prayer: "0", forced: "{}", kicked: "[]", resultsDone: 0, gameId: "g" + Date.now().toString(36) });
+    setState_({ status: "idle", round: 0, part: 0, endsAt: 0, lesson: "0", prayer: "0", forced: "{}", kicked: "[]", names: "{}", resultsDone: 0, gameId: "g" + Date.now().toString(36) });
   } else {
     return out_({ error: "bad_action" });
   }
@@ -304,6 +320,7 @@ function doGet(e) {
       st.adj = r ? Number(r[8]) || 0 : 0;
       st.group = r ? Number(r[10]) || 0 : 0;
       st.kicked = kicked_().indexOf(String(id)) >= 0;
+      st.teamName = names_()[String(id)] || "";
       st.items = pendingItems_(id).map(x => ({ key: x.key, kind: x.kind, amount: x.amount }));
     }
     return out_(st);

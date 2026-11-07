@@ -1719,6 +1719,10 @@ async function pollRound() {
   // the teacher kicked this device out: one screen over everything, and no more reports
   kickedOut = s.kicked === true;
   $("#kicked").hidden = !kickedOut;
+  // the teacher renamed this team: take the new name
+  if (typeof s.teamName === "string" && s.teamName && state.team && s.teamName !== state.team) {
+    state.team = s.teamName; save(true); showTeam(); toast("تغيّر اسم فريقكم", s.teamName, 4000);
+  }
   if (Array.isArray(s.items)) syncItems(s.items);
   if (typeof s.group === "number" && s.group && s.group !== state.group && state.team) {
     state.group = s.group; save(true);
