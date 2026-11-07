@@ -367,7 +367,13 @@ function renderCards(rows) {
         renderCards(lastRows);
         setTimeout(() => { if (armKick.id === r.id) { armKick = { id: "", until: 0 }; renderCards(lastRows); } }, 3600);
       });
-      acts.append(up, down, kick);
+      const ren = el("button", "t-kick", "تغيير الاسم");
+      ren.type = "button";
+      ren.addEventListener("click", () => {
+        const nm = (prompt("الاسم الجديد للفريق «" + (r.team || "بلا اسم") + "»:", r.team || "") || "").trim();
+        if (nm && nm !== r.team) { ren.disabled = true; control("rename", { id: r.id, team: nm.slice(0, 30) }); }
+      });
+      acts.append(up, down, ren, kick);
       card.append(acts);
     }
     grid.append(card);
@@ -499,6 +505,7 @@ async function control(action, extra) {
       ctrlMsg("لم يُنفَّذ الأمر (" + j.error + "). حاول مرة أخرى.", "err");
     } else if (j.state) {
       $("#pinForm").hidden = true; $("#pinMsg").textContent = "";
+      if (action === "rename") ctrlMsg("تم تغيير اسم الفريق.", "ok");
       if (action === "resultsDone") ctrlMsg("ظهرت المحطات القادمة للفرق.", "ok");
       if (action === "extend") ctrlMsg("تمت إضافة دقيقة. يستطيع الفرق كتابة أجوبتهم الآن.", "ok");
       if (action === "kick") ctrlMsg("تم طرد الفريق من اللعبة.", "ok");
