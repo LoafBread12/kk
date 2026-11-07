@@ -79,7 +79,8 @@ function state_() {
     endsAt: endsAt ? new Date(endsAt).toISOString() : "",
     now: new Date().toISOString(),
     gameId: gameId,
-    forced: forced_()                              // test mode: {group: stationId} the teacher fixed by hand
+    forced: forced_(),                             // test mode: {group: stationId} the teacher fixed by hand
+    resultsDone: Number(p.getProperty("resultsDone") || 0)   // the round whose results the teacher has finished showing
   };
 }
 // devices the teacher kicked out: they cannot report or play until a new game starts
@@ -224,6 +225,8 @@ function control_(d) {
     if (st.status === "break" && st.part < st.parts) startPart_(st.round, st.part + 1);
   } else if (d.action === "end") {                  // end the running part early
     if (st.status === "running") { closePart_(now); setState_({ status: st.part >= st.parts ? "ended" : "break", endsAt: now.getTime() }); }
+  } else if (d.action === "resultsDone") {          // the results were shown: the teams may now see their next station
+    setState_({ resultsDone: st.round });
   } else if (d.action === "extend") {               // one more minute for the answers, also after the shawt (or round) ended
     const p = PropertiesService.getScriptProperties();
     if (st.status === "running") {
@@ -245,6 +248,7 @@ function control_(d) {
     const r = Math.max(1, Math.min(PARTS_PER_ROUND.length, Number(d.round) || 1));
     const pt = Math.max(1, Math.min(partsFor_(r), Number(d.part) || 1));
     if (st.status === "running") closePart_(now);
+    setState_({ resultsDone: 0 });
     startPart_(r, pt);
   } else if (d.action === "prayer") {             // the teacher's prayer button: hold or release the part's clock
     const p = PropertiesService.getScriptProperties(), on = p.getProperty("prayer") === "1";
@@ -270,7 +274,7 @@ function control_(d) {
     return adjust_(d, st);
   } else if (d.action === "new") {
     clear_("progress"); clear_("log"); clear_("rounds"); clear_("items");
-    setState_({ status: "idle", round: 0, part: 0, endsAt: 0, lesson: "0", prayer: "0", forced: "{}", kicked: "[]", gameId: "g" + Date.now().toString(36) });
+    setState_({ status: "idle", round: 0, part: 0, endsAt: 0, lesson: "0", prayer: "0", forced: "{}", kicked: "[]", resultsDone: 0, gameId: "g" + Date.now().toString(36) });
   } else {
     return out_({ error: "bad_action" });
   }
